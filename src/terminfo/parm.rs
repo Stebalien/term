@@ -531,7 +531,7 @@ fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8> ,String> {
                     }
                 }
                 FormatHEX => {
-                    s = s.into_ascii_upper();
+                    s = s.into_ascii_uppercase();
                     if flags.alternate {
                         let s_ = replace(&mut s, vec!(b'0', b'X'));
                         s.extend(s_.into_iter());
