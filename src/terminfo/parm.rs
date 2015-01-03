@@ -14,10 +14,12 @@ pub use self::Param::*;
 use self::States::*;
 use self::FormatState::*;
 use self::FormatOp::*;
+
 use std::ascii::OwnedAsciiExt;
+use std::iter::repeat;
 use std::mem::replace;
 
-#[deriving(Copy, PartialEq)]
+#[derive(Copy, PartialEq)]
 enum States {
     Nothing,
     Percent,
@@ -34,7 +36,7 @@ enum States {
     SeekIfEndPercent(int)
 }
 
-#[deriving(Copy, PartialEq)]
+#[derive(Copy, PartialEq)]
 enum FormatState {
     FormatStateFlags,
     FormatStateWidth,
@@ -43,7 +45,7 @@ enum FormatState {
 
 /// Types of parameters a capability can use
 #[allow(missing_docs)]
-#[deriving(Clone)]
+#[derive(Clone)]
 pub enum Param {
     Words(String),
     Number(int)
@@ -52,9 +54,9 @@ pub enum Param {
 /// Container for static and dynamic variable arrays
 pub struct Variables {
     /// Static variables A-Z
-    sta: [Param, ..26],
+    sta: [Param; 26],
     /// Dynamic variables a-z
-    dyn: [Param, ..26]
+    dyn: [Param; 26]
 }
 
 impl Variables {
@@ -443,7 +445,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables)
     Ok(output)
 }
 
-#[deriving(Copy, PartialEq)]
+#[derive(Copy, PartialEq)]
 struct Flags {
     width: uint,
     precision: uint,
@@ -460,7 +462,7 @@ impl Flags {
     }
 }
 
-#[deriving(Copy)]
+#[derive(Copy)]
 enum FormatOp {
     FormatDigit,
     FormatOctal,
@@ -508,7 +510,7 @@ fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8> ,String> {
             if flags.precision > s.len() {
                 let mut s_ = Vec::with_capacity(flags.precision);
                 let n = flags.precision - s.len();
-                s_.grow(n, b'0');
+                s_.extend(repeat(b'0').take(n));
                 s_.extend(s.into_iter());
                 s = s_;
             }
@@ -560,10 +562,10 @@ fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8> ,String> {
     if flags.width > s.len() {
         let n = flags.width - s.len();
         if flags.left {
-            s.grow(n, b' ');
+            s.extend(repeat(b' ').take(n));
         } else {
             let mut s_ = Vec::with_capacity(flags.width);
-            s_.grow(n, b' ');
+            s_.extend(repeat(b' ').take(n));
             s_.extend(s.into_iter());
             s = s_;
         }
