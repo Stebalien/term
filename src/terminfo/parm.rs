@@ -497,16 +497,15 @@ fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8> ,String> {
     let mut s = match val {
         Number(d) => {
             let s = match (op, flags.sign) {
-                (FormatDigit, true)  => format!("{:+}", d).into_bytes(),
-                (FormatDigit, false) => format!("{}", d).into_bytes(),
-                (FormatOctal, _)     => format!("{:o}", d).into_bytes(),
-                (FormatHex, _)       => format!("{:x}", d).into_bytes(),
-                (FormatHEX, _)       => format!("{:X}", d).into_bytes(),
-                (FormatString, _)    => {
-                    return Err("non-number on stack with %s".to_string())
-                }
+                (FormatDigit, true)  => format!("{:+}", d),
+                (FormatDigit, false) => format!("{}", d),
+                (FormatOctal, _)     => format!("{:o}", d),
+                (FormatHex, _)       => format!("{:x}", d),
+                (FormatHEX, _)       => format!("{:X}", d),
+                (FormatString, _)    => return Err("non-number on stack with %s".to_string())
             };
-            let mut s: Vec<u8> = s.into_iter().collect();
+
+            let mut s: Vec<u8> = s.into_bytes().into_iter().collect();
             if flags.precision > s.len() {
                 let mut s_ = Vec::with_capacity(flags.precision);
                 let n = flags.precision - s.len();
