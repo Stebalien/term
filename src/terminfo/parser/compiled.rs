@@ -167,19 +167,11 @@ pub fn parse(file: &mut io::Reader, longnames: bool)
         }
     ) );
 
-    let bnames;
-    let snames;
-    let nnames;
-
-    if longnames {
-        bnames = boolfnames;
-        snames = stringfnames;
-        nnames = numfnames;
+    let (bnames, snames, nnames) = if longnames {
+        (boolfnames, stringfnames, numfnames)
     } else {
-        bnames = boolnames;
-        snames = stringnames;
-        nnames = numnames;
-    }
+        (boolnames, stringnames, numnames)
+    };
 
     // Check magic number
     let magic = try!(file.read_le_u16());
@@ -194,7 +186,7 @@ pub fn parse(file: &mut io::Reader, longnames: bool)
     let string_offsets_count = try!(file.read_le_i16()) as int;
     let string_table_bytes   = try!(file.read_le_i16()) as int;
 
-    assert!(names_bytes          > 0);
+    assert!(names_bytes > 0);
 
     if (bools_bytes as uint) > boolnames.len() {
         return Err("incompatible file: more booleans than \

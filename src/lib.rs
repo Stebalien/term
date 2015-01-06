@@ -96,18 +96,10 @@ pub fn stdout() -> Option<Box<Terminal<WriterWrapper> + Send>> {
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
 /// opened.
 pub fn stdout() -> Option<Box<Terminal<WriterWrapper> + Send>> {
-    let ti = TerminfoTerminal::new(WriterWrapper {
-        wrapped: box std::io::stdout() as Box<Writer + Send>,
-    });
+    let boxed = box std::io::stdio() as Box<Writer + Send>;
+    let wrapped = WriterWrapper {wrapper: boxed};
 
-    match ti {
-        Some(t) => Some(t),
-        None => {
-            WinConsole::new(WriterWrapper {
-                wrapped: box std::io::stdout() as Box<Writer + Send>,
-            })
-        }
-    }
+    TerminfoTerminal::new(wrapped).or(WinConsole::new(wrapped));
 }
 
 #[cfg(not(windows))]
@@ -123,18 +115,10 @@ pub fn stderr() -> Option<Box<Terminal<WriterWrapper> + Send>> {
 /// Return a Terminal wrapping stderr, or None if a terminal couldn't be
 /// opened.
 pub fn stderr() -> Option<Box<Terminal<WriterWrapper> + Send>> {
-    let ti = TerminfoTerminal::new(WriterWrapper {
-        wrapped: box std::io::stderr() as Box<Writer + Send>,
-    });
+    let boxed = box std::io::stderr() as Box<Writer + Send>;
+    let wrapped = WriterWrapper {wrapper: boxed};
 
-    match ti {
-        Some(t) => Some(t),
-        None => {
-            WinConsole::new(WriterWrapper {
-                wrapped: box std::io::stderr() as Box<Writer + Send>,
-            })
-        }
-    }
+    TerminfoTerminal::new(wrapped).or(WinConsole::new(wrapped));
 }
 
 
