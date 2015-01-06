@@ -167,19 +167,11 @@ pub fn parse(file: &mut io::Reader, longnames: bool)
         }
     ) );
 
-    let bnames;
-    let snames;
-    let nnames;
-
-    if longnames {
-        bnames = boolfnames;
-        snames = stringfnames;
-        nnames = numfnames;
+    let (bnames, snames, nnames) = if longnames {
+        (boolfnames, stringfnames, numfnames)
     } else {
-        bnames = boolnames;
-        snames = stringnames;
-        nnames = numnames;
-    }
+        (boolnames, stringnames, numnames)
+    };
 
     // Check magic number
     let magic = try!(file.read_le_u16());
