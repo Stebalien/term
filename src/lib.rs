@@ -127,57 +127,52 @@ pub mod color {
     /// Number for a terminal color
     pub type Color = u16;
 
-    pub const BLACK:   Color = 0u16;
-    pub const RED:     Color = 1u16;
-    pub const GREEN:   Color = 2u16;
-    pub const YELLOW:  Color = 3u16;
-    pub const BLUE:    Color = 4u16;
-    pub const MAGENTA: Color = 5u16;
-    pub const CYAN:    Color = 6u16;
-    pub const WHITE:   Color = 7u16;
+    pub const BLACK:   Color = 0;
+    pub const RED:     Color = 1;
+    pub const GREEN:   Color = 2;
+    pub const YELLOW:  Color = 3;
+    pub const BLUE:    Color = 4;
+    pub const MAGENTA: Color = 5;
+    pub const CYAN:    Color = 6;
+    pub const WHITE:   Color = 7;
 
-    pub const BRIGHT_BLACK:   Color = 8u16;
-    pub const BRIGHT_RED:     Color = 9u16;
-    pub const BRIGHT_GREEN:   Color = 10u16;
-    pub const BRIGHT_YELLOW:  Color = 11u16;
-    pub const BRIGHT_BLUE:    Color = 12u16;
-    pub const BRIGHT_MAGENTA: Color = 13u16;
-    pub const BRIGHT_CYAN:    Color = 14u16;
-    pub const BRIGHT_WHITE:   Color = 15u16;
+    pub const BRIGHT_BLACK:   Color = 8;
+    pub const BRIGHT_RED:     Color = 9;
+    pub const BRIGHT_GREEN:   Color = 10;
+    pub const BRIGHT_YELLOW:  Color = 11;
+    pub const BRIGHT_BLUE:    Color = 12;
+    pub const BRIGHT_MAGENTA: Color = 13;
+    pub const BRIGHT_CYAN:    Color = 14;
+    pub const BRIGHT_WHITE:   Color = 15;
 }
 
-/// Terminal attributes
-pub mod attr {
-    pub use self::Attr::*;
-
-    /// Terminal attributes for use with term.attr().
-    ///
-    /// Most attributes can only be turned on and must be turned off with term.reset().
-    /// The ones that can be turned off explicitly take a boolean value.
-    /// Color is also represented as an attribute for convenience.
-    #[derive(Copy)]
-    pub enum Attr {
-        /// Bold (or possibly bright) mode
-        Bold,
-        /// Dim mode, also called faint or half-bright. Often not supported
-        Dim,
-        /// Italics mode. Often not supported
-        Italic(bool),
-        /// Underline mode
-        Underline(bool),
-        /// Blink mode
-        Blink,
-        /// Standout mode. Often implemented as Reverse, sometimes coupled with Bold
-        Standout(bool),
-        /// Reverse mode, inverts the foreground and background colors
-        Reverse,
-        /// Secure mode, also called invis mode. Hides the printed text
-        Secure,
-        /// Convenience attribute to set the foreground color
-        ForegroundColor(super::color::Color),
-        /// Convenience attribute to set the background color
-        BackgroundColor(super::color::Color)
-    }
+/// Terminal attributes for use with term.attr().
+///
+/// Most attributes can only be turned on and must be turned off with term.reset().
+/// The ones that can be turned off explicitly take a boolean value.
+/// Color is also represented as an attribute for convenience.
+#[derive(Copy)]
+pub enum Attr {
+    /// Bold (or possibly bright) mode
+    Bold,
+    /// Dim mode, also called faint or half-bright. Often not supported
+    Dim,
+    /// Italics mode. Often not supported
+    Italic(bool),
+    /// Underline mode
+    Underline(bool),
+    /// Blink mode
+    Blink,
+    /// Standout mode. Often implemented as Reverse, sometimes coupled with Bold
+    Standout(bool),
+    /// Reverse mode, inverts the foreground and background colors
+    Reverse,
+    /// Secure mode, also called invis mode. Hides the printed text
+    Secure,
+    /// Convenience attribute to set the foreground color
+    ForegroundColor(color::Color),
+    /// Convenience attribute to set the background color
+    BackgroundColor(color::Color)
 }
 
 /// A terminal with similar capabilities to an ANSI Terminal
@@ -204,10 +199,10 @@ pub trait Terminal<T: Writer>: Writer {
     /// Sets the given terminal attribute, if supported.  Returns `Ok(true)`
     /// if the attribute was supported, `Ok(false)` otherwise, and `Err(e)` if
     /// there was an I/O error.
-    fn attr(&mut self, attr: attr::Attr) -> IoResult<bool>;
+    fn attr(&mut self, attr: Attr) -> IoResult<bool>;
 
     /// Returns whether the given terminal attribute is supported.
-    fn supports_attr(&self, attr: attr::Attr) -> bool;
+    fn supports_attr(&self, attr: Attr) -> bool;
 
     /// Resets all terminal attributes and color to the default.
     /// Returns `Ok()`.

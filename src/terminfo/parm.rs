@@ -10,7 +10,7 @@
 
 //! Parameterized string expansion
 
-pub use self::Param::*;
+use self::Param::*;
 use self::States::*;
 use self::FormatState::*;
 use self::FormatOp::*;
@@ -574,7 +574,8 @@ fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8> ,String> {
 
 #[cfg(test)]
 mod test {
-    use super::{expand,Param,Words,Variables,Number};
+    use super::{expand, Variables};
+    use super::Param::{self, Words, Number};
     use std::result::Result::Ok;
 
     #[test]

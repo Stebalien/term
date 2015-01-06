@@ -14,13 +14,14 @@ use std::collections::HashMap;
 use std::io::IoResult;
 use std::os;
 
-use attr;
+use Attr;
 use color;
 use Terminal;
 use UnwrappableTerminal;
 use self::searcher::open;
 use self::parser::compiled::{parse, msys_terminfo};
-use self::parm::{expand, Number, Variables};
+use self::parm::{expand, Variables};
+use self::parm::Param::Number;
 
 
 /// A parsed terminfo database entry.
@@ -46,21 +47,21 @@ pub mod parser {
 pub mod parm;
 
 
-fn cap_for_attr(attr: attr::Attr) -> &'static str {
+fn cap_for_attr(attr: Attr) -> &'static str {
     match attr {
-        attr::Bold               => "bold",
-        attr::Dim                => "dim",
-        attr::Italic(true)       => "sitm",
-        attr::Italic(false)      => "ritm",
-        attr::Underline(true)    => "smul",
-        attr::Underline(false)   => "rmul",
-        attr::Blink              => "blink",
-        attr::Standout(true)     => "smso",
-        attr::Standout(false)    => "rmso",
-        attr::Reverse            => "rev",
-        attr::Secure             => "invis",
-        attr::ForegroundColor(_) => "setaf",
-        attr::BackgroundColor(_) => "setab"
+        Attr::Bold               => "bold",
+        Attr::Dim                => "dim",
+        Attr::Italic(true)       => "sitm",
+        Attr::Italic(false)      => "ritm",
+        Attr::Underline(true)    => "smul",
+        Attr::Underline(false)   => "rmul",
+        Attr::Blink              => "blink",
+        Attr::Standout(true)     => "smso",
+        Attr::Standout(false)    => "rmso",
+        Attr::Reverse            => "rev",
+        Attr::Secure             => "invis",
+        Attr::ForegroundColor(_) => "setaf",
+        Attr::BackgroundColor(_) => "setab"
     }
 }
 
@@ -107,10 +108,10 @@ impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
         Ok(false)
     }
 
-    fn attr(&mut self, attr: attr::Attr) -> IoResult<bool> {
+    fn attr(&mut self, attr: Attr) -> IoResult<bool> {
         match attr {
-            attr::ForegroundColor(c) => self.fg(c),
-            attr::BackgroundColor(c) => self.bg(c),
+            Attr::ForegroundColor(c) => self.fg(c),
+            Attr::BackgroundColor(c) => self.bg(c),
             _ => {
                 let cap = cap_for_attr(attr);
                 let parm = self.ti.strings.get(cap);
@@ -128,9 +129,9 @@ impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
         }
     }
 
-    fn supports_attr(&self, attr: attr::Attr) -> bool {
+    fn supports_attr(&self, attr: Attr) -> bool {
         match attr {
-            attr::ForegroundColor(_) | attr::BackgroundColor(_) => {
+            Attr::ForegroundColor(_) | Attr::BackgroundColor(_) => {
                 self.num_colors > 0
             }
             _ => {
