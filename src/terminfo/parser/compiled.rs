@@ -186,7 +186,7 @@ pub fn parse(file: &mut io::Reader, longnames: bool)
     let string_offsets_count = try!(file.read_le_i16()) as int;
     let string_table_bytes   = try!(file.read_le_i16()) as int;
 
-    assert!(names_bytes          > 0);
+    assert!(names_bytes > 0);
 
     if (bools_bytes as uint) > boolnames.len() {
         return Err("incompatible file: more booleans than \
