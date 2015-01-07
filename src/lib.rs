@@ -38,21 +38,14 @@
 //! [win]: http://msdn.microsoft.com/en-us/library/windows/desktop/ms682010%28v=vs.85%29.aspx
 //! [ti]: https://en.wikipedia.org/wiki/Terminfo
 
-#![crate_name = "term"]
-#![experimental]
-#![crate_type = "rlib"]
-#![crate_type = "dylib"]
 #![doc(html_logo_url = "http://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/nightly/",
        html_playground_url = "http://play.rust-lang.org/")]
-
-#![allow(unknown_features)]
-#![feature(macro_rules, phase, slicing_syntax, globs)]
-
+#![feature(slicing_syntax)]
 #![deny(missing_docs)]
 
-#[phase(plugin, link)] extern crate log;
+#[macro_use] extern crate log;
 
 pub use terminfo::TerminfoTerminal;
 #[cfg(windows)]
