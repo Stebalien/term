@@ -69,7 +69,7 @@ fn cap_for_attr(attr: Attr) -> &'static str {
 pub struct TerminfoTerminal<T> {
     num_colors: u16,
     out: T,
-    ti: Box<TermInfo>
+    ti: TermInfo,
 }
 
 impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
@@ -139,7 +139,7 @@ impl<T: Writer+Send> UnwrappableTerminal<T> for TerminfoTerminal<T> {
 impl<T: Writer+Send> TerminfoTerminal<T> {
     /// Returns `None` whenever the terminal cannot be created for some
     /// reason.
-    pub fn new(out: T) -> Option<Box<Terminal<T>+Send+'static>> {
+    pub fn new(out: T) -> Option<TerminfoTerminal<T>> {
         let term = match os::getenv("TERM") {
             Some(t) => t,
             None => {
@@ -154,9 +154,11 @@ impl<T: Writer+Send> TerminfoTerminal<T> {
                     "mintty.exe" == s
                 }) {
                 // msys terminal
-                return Some(Box::new(TerminfoTerminal {out: out,
-                                                       ti: msys_terminfo(),
-                                                       num_colors: 8}) as Box<Terminal<T>+Send>);
+                return Some(TerminfoTerminal {
+                    out: out,
+                    ti: msys_terminfo(),
+                    num_colors: 8
+                });
             }
             debug!("error finding terminfo entry: {}", entry.err().unwrap());
             return None;
@@ -175,9 +177,11 @@ impl<T: Writer+Send> TerminfoTerminal<T> {
                      inf.numbers.get("colors").map_or(0, |&n| n)
                  } else { 0 };
 
-        return Some(Box::new(TerminfoTerminal {out: out,
-                                               ti: inf,
-                                               num_colors: nc}) as Box<Terminal<T>+Send>);
+        return Some(TerminfoTerminal {
+            out: out,
+            ti: inf,
+            num_colors: nc
+        });
     }
 
     fn dim_if_necessary(&self, color: color::Color) -> color::Color {

@@ -159,7 +159,7 @@ pub static stringnames: &'static[&'static str] = &[ "cbt", "_", "cr", "csr", "tb
 
 /// Parse a compiled terminfo entry, using long capability names if `longnames` is true
 pub fn parse(file: &mut io::Reader, longnames: bool)
-             -> Result<Box<TermInfo>, String> {
+             -> Result<TermInfo, String> {
     macro_rules! try( ($e:expr) => (
         match $e {
             Ok(e) => e,
@@ -293,27 +293,27 @@ pub fn parse(file: &mut io::Reader, longnames: bool)
     }
 
     // And that's all there is to it
-    Ok(Box::new(TermInfo {
+    Ok(TermInfo {
         names: term_names,
         bools: bools_map,
         numbers: numbers_map,
         strings: string_map
-    }))
+    })
 }
 
 /// Create a dummy TermInfo struct for msys terminals
-pub fn msys_terminfo() -> Box<TermInfo> {
+pub fn msys_terminfo() -> TermInfo {
     let mut strings = HashMap::new();
     strings.insert("sgr0".to_string(), b"\x1B[0m".to_vec());
     strings.insert("bold".to_string(), b"\x1B[1m".to_vec());
     strings.insert("setaf".to_string(), b"\x1B[3%p1%dm".to_vec());
     strings.insert("setab".to_string(), b"\x1B[4%p1%dm".to_vec());
-    Box::new(TermInfo {
+    TermInfo {
         names: vec!("cygwin".to_string()), // msys is a fork of an older cygwin version
         bools: HashMap::new(),
         numbers: HashMap::new(),
         strings: strings
-    })
+    }
 }
 
 #[cfg(test)]
