@@ -11,14 +11,15 @@
 //! Terminfo database interface.
 
 use std::collections::HashMap;
-use std::io::IoResult;
+use std::error::Error as ErrorTrait;
+use std::io::{self, IoError, IoErrorKind, IoResult, File};
 use std::os;
 
 use Attr;
 use color;
 use Terminal;
 use UnwrappableTerminal;
-use self::searcher::open;
+use self::searcher::get_dbpath_for_term;
 use self::parser::compiled::{parse, msys_terminfo};
 use self::parm::{expand, Variables, Param};
 
@@ -34,6 +35,75 @@ pub struct TermInfo {
     pub numbers: HashMap<String, u16>,
     /// Map of capability name to raw (unexpanded) string
     pub strings: HashMap<String, Vec<u8> >
+}
+
+/// A terminfo creation error.
+pub enum Error {
+    /// TermUnset Indicates that the environment doesn't include enough information to find
+    /// the terminfo entry.
+    TermUnset,
+    /// MalformedTerminfo indicates that parsing the terminfo entry failed.
+    MalformedTerminfo(String),
+    /// IoError forwards any IoErrors encountered when finding or reading the terminfo entry.
+    IoError(IoError),
+}
+
+impl ErrorTrait for Error {
+    fn description(&self) -> &str { "failed to create TermInfo" }
+
+    fn detail(&self) -> Option<String> {
+        use self::Error::*;
+        match self {
+            &TermUnset => None,
+            &MalformedTerminfo(ref e) => Some(e.clone()),
+            &IoError(ref e) => e.detail()
+        }
+    }
+
+    fn cause(&self) -> Option<&ErrorTrait> {
+        use self::Error::*;
+        match self {
+            &IoError(ref e) => Some(e),
+            _ => None,
+        }
+    }
+}
+
+impl TermInfo {
+    /// Create a TermInfo based on current environment.
+    pub fn from_env() -> Result<TermInfo, Error> {
+        let term = match os::getenv("TERM") {
+            Some(name) => TermInfo::from_name(&name[]),
+            None => return Err(Error::TermUnset),
+        };
+
+        if term.is_err() && os::getenv("MSYSCON").map_or(false, |s| "mintty.exe" == s) {
+            // msys terminal
+            Ok(msys_terminfo())
+        } else {
+            term
+        }
+    }
+
+    /// Create a TermInfo for the named terminal.
+    pub fn from_name(name: &str) -> Result<TermInfo, Error> {
+        get_dbpath_for_term(name).ok_or_else(|| {
+            Error::IoError(io::standard_error(IoErrorKind::FileNotFound))
+        }).and_then(|p| {
+            TermInfo::from_path(&p)
+        })
+    }
+
+    /// Parse the given TermInfo.
+    pub fn from_path(path: &Path) -> Result<TermInfo, Error> {
+        File::open(path).map_err(|e| {
+            Error::IoError(e)
+        }).and_then(|ref mut file| {
+            parse(file, false).map_err(|e| {
+                Error::MalformedTerminfo(e)
+            })
+        })
+    }
 }
 
 pub mod searcher;
@@ -137,51 +207,25 @@ impl<T: Writer+Send> UnwrappableTerminal<T> for TerminfoTerminal<T> {
 }
 
 impl<T: Writer+Send> TerminfoTerminal<T> {
-    /// Returns `None` whenever the terminal cannot be created for some
-    /// reason.
-    pub fn new(out: T) -> Option<TerminfoTerminal<T>> {
-        let term = match os::getenv("TERM") {
-            Some(t) => t,
-            None => {
-                debug!("TERM environment variable not defined");
-                return None;
-            }
-        };
-
-        let entry = open(&term[]);
-        if entry.is_err() {
-            if os::getenv("MSYSCON").map_or(false, |s| {
-                    "mintty.exe" == s
-                }) {
-                // msys terminal
-                return Some(TerminfoTerminal {
-                    out: out,
-                    ti: msys_terminfo(),
-                    num_colors: 8
-                });
-            }
-            debug!("error finding terminfo entry: {}", entry.err().unwrap());
-            return None;
-        }
-
-        let mut file = entry.unwrap();
-        let ti = parse(&mut file, false);
-        if ti.is_err() {
-            debug!("error parsing terminfo entry: {}", ti.unwrap_err());
-            return None;
-        }
-
-        let inf = ti.unwrap();
-        let nc = if inf.strings.get("setaf").is_some()
-                 && inf.strings.get("setab").is_some() {
-                     inf.numbers.get("colors").map_or(0, |&n| n)
+    /// Create a new TerminfoTerminal with the given TermInfo and Writer.
+    pub fn new_with_terminfo(out: T, terminfo: TermInfo) -> TerminfoTerminal<T> {
+        let nc = if terminfo.strings.contains_key("setaf")
+                 && terminfo.strings.contains_key("setab") {
+                     terminfo.numbers.get("colors").map_or(0, |&n| n)
                  } else { 0 };
 
-        return Some(TerminfoTerminal {
+        TerminfoTerminal {
             out: out,
-            ti: inf,
-            num_colors: nc
-        });
+            ti: terminfo,
+            num_colors: nc,
+        }
+    }
+
+    /// Create a new TerminfoTerminal for the current environment with the given Writer.
+    ///
+    /// Returns `None` when the terminfo cannot be found or parsed.
+    pub fn new(out: T) -> Option<TerminfoTerminal<T>> {
+        TermInfo::from_env().map(move |ti| TerminfoTerminal::new_with_terminfo(out, ti)).ok()
     }
 
     fn dim_if_necessary(&self, color: color::Color) -> color::Color {

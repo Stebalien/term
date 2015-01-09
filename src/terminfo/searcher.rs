@@ -12,7 +12,6 @@
 //!
 //! Does not support hashed database, only filesystem!
 
-use std::io::File;
 use std::io::fs::PathExtensions;
 use std::os::getenv;
 use std::os;
@@ -76,21 +75,6 @@ pub fn get_dbpath_for_term(term: &str) -> Option<Path> {
     None
 }
 
-/// Return open file for `term`
-pub fn open(term: &str) -> Result<File, String> {
-    match get_dbpath_for_term(term) {
-        Some(x) => {
-            match File::open(&x) {
-                Ok(file) => Ok(file),
-                Err(e) => Err(format!("error opening file: {}", e)),
-            }
-        }
-        None => {
-            Err(format!("could not find terminfo entry for {}", term))
-        }
-    }
-}
-
 #[test]
 #[ignore(reason = "buildbots don't have ncurses installed and I can't mock everything I need")]
 fn test_get_dbpath_for_term() {
@@ -107,12 +91,4 @@ fn test_get_dbpath_for_term() {
     setenv("TERMINFO_DIRS", ":");
     assert!(x("screen") == "/usr/share/terminfo/s/screen");
     unsetenv("TERMINFO_DIRS");
-}
-
-#[test]
-#[ignore(reason = "see test_get_dbpath_for_term")]
-fn test_open() {
-    open("screen").unwrap();
-    let t = open("nonexistent terminal that hopefully does not exist");
-    assert!(t.is_err());
 }
