@@ -179,12 +179,12 @@ impl<T: Writer+Send> Terminal<T> for WinConsole<T> {
         }
     }
 
-    fn reset(&mut self) -> IoResult<()> {
+    fn reset(&mut self) -> IoResult<bool> {
         self.foreground = self.def_foreground;
         self.background = self.def_background;
         self.apply();
 
-        Ok(())
+        Ok(true)
     }
 
     fn get_ref<'a>(&'a self) -> &'a T { &self.buf }

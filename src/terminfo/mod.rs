@@ -141,23 +141,22 @@ impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
         }
     }
 
-    fn reset(&mut self) -> IoResult<()> {
-        let mut cap = self.ti.strings.get("sgr0");
-        if cap.is_none() {
-            // are there any terminals that have color/attrs and not sgr0?
-            // Try falling back to sgr, then op
-            cap = self.ti.strings.get("sgr");
-            if cap.is_none() {
-                cap = self.ti.strings.get("op");
-            }
-        }
-        let s = cap.map_or(Err("can't find terminfo capability `sgr0`".to_string()), |op| {
-            expand(op.as_slice(), &[], &mut Variables::new())
-        });
-        if s.is_ok() {
-            return self.out.write(s.unwrap().as_slice())
-        }
-        Ok(())
+    fn reset(&mut self) -> IoResult<bool> {
+        // are there any terminals that have color/attrs and not sgr0?
+        // Try falling back to sgr, then op
+        let cmd = match [
+            "sg0", "sgr", "op"
+        ].iter().filter_map(|cap| {
+            self.ti.strings.get(*cap)
+        }).next() {
+            Some(op) => match expand(op[], &[], &mut Variables::new()) {
+                Ok(cmd) => cmd,
+                Err(_) => return Ok(false),
+            },
+            None => return Ok(false),
+        };
+
+        self.out.write(cmd[]).map(|_|true)
     }
 
     fn get_ref<'a>(&'a self) -> &'a T { &self.out }
