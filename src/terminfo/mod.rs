@@ -20,8 +20,7 @@ use Terminal;
 use UnwrappableTerminal;
 use self::searcher::open;
 use self::parser::compiled::{parse, msys_terminfo};
-use self::parm::{expand, Variables};
-use self::parm::Param::Number;
+use self::parm::{expand, Variables, Param};
 
 
 /// A parsed terminfo database entry.
@@ -77,16 +76,7 @@ impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
     fn fg(&mut self, color: color::Color) -> IoResult<bool> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
-            let s = expand(self.ti
-                               .strings
-                               .get("setaf")
-                               .unwrap()
-                               .as_slice(),
-                           &[Number(color as int)], &mut Variables::new());
-            if s.is_ok() {
-                try!(self.out.write(s.unwrap().as_slice()));
-                return Ok(true)
-            }
+            return self.apply_cap("setaf", &[Param::Number(color as int)]);
         }
         Ok(false)
     }
@@ -94,16 +84,7 @@ impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
     fn bg(&mut self, color: color::Color) -> IoResult<bool> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
-            let s = expand(self.ti
-                               .strings
-                               .get("setab")
-                               .unwrap()
-                               .as_slice(),
-                           &[Number(color as int)], &mut Variables::new());
-            if s.is_ok() {
-                try!(self.out.write(s.unwrap().as_slice()));
-                return Ok(true)
-            }
+            return self.apply_cap("setab", &[Param::Number(color as int)]);
         }
         Ok(false)
     }
@@ -112,20 +93,7 @@ impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
         match attr {
             Attr::ForegroundColor(c) => self.fg(c),
             Attr::BackgroundColor(c) => self.bg(c),
-            _ => {
-                let cap = cap_for_attr(attr);
-                let parm = self.ti.strings.get(cap);
-                if parm.is_some() {
-                    let s = expand(parm.unwrap().as_slice(),
-                                   &[],
-                                   &mut Variables::new());
-                    if s.is_ok() {
-                        try!(self.out.write(s.unwrap().as_slice()));
-                        return Ok(true)
-                    }
-                }
-                Ok(false)
-            }
+            _ => self.apply_cap(cap_for_attr(attr), &[]),
         }
     }
 
@@ -216,6 +184,16 @@ impl<T: Writer+Send> TerminfoTerminal<T> {
         if color >= self.num_colors && color >= 8 && color < 16 {
             color-8
         } else { color }
+    }
+
+    fn apply_cap(&mut self, cmd: &str, params: &[Param]) -> IoResult<bool> {
+        if let Some(cmd) = self.ti.strings.get(cmd) {
+            if let Ok(s) = expand(cmd.as_slice(), params, &mut Variables::new()) {
+                try!(self.out.write(s.as_slice()));
+                return Ok(true)
+            }
+        }
+        Ok(false)
     }
 }
 
