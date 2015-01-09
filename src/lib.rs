@@ -19,6 +19,7 @@
 //! # Examples
 //!
 //! ```no_run
+//! # #![allow(unstable)]
 //! extern crate term;
 //!
 //! fn main() {
@@ -42,8 +43,9 @@
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/nightly/",
        html_playground_url = "http://play.rust-lang.org/")]
-#![feature(slicing_syntax)]
+#![feature(int_uint)]
 #![deny(missing_docs)]
+#![allow(unstable)]
 
 #[macro_use] extern crate log;
 
@@ -81,7 +83,7 @@ impl Writer for WriterWrapper {
 /// opened.
 pub fn stdout() -> Option<Box<Terminal<WriterWrapper> + Send>> {
     TerminfoTerminal::new(WriterWrapper {
-        wrapped: box std::io::stdout() as Box<Writer + Send>,
+        wrapped: Box::new(std::io::stdout()) as Box<Writer + Send>,
     })
 }
 
@@ -100,7 +102,7 @@ pub fn stdout() -> Option<Box<Terminal<WriterWrapper> + Send>> {
 /// opened.
 pub fn stderr() -> Option<Box<Terminal<WriterWrapper> + Send>> {
     TerminfoTerminal::new(WriterWrapper {
-        wrapped: box std::io::stderr() as Box<Writer + Send>,
+        wrapped: Box::new(std::io::stderr()) as Box<Writer + Send>,
     })
 }
 

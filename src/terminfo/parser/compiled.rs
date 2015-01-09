@@ -177,7 +177,7 @@ pub fn parse(file: &mut io::Reader, longnames: bool)
     let magic = try!(file.read_le_u16());
     if magic != 0x011A {
         return Err(format!("invalid magic number: expected {:x}, found {:x}",
-                           0x011Au, magic as uint));
+                           0x011A_us, magic as usize));
     }
 
     let names_bytes          = try!(file.read_le_i16()) as int;
@@ -293,12 +293,12 @@ pub fn parse(file: &mut io::Reader, longnames: bool)
     }
 
     // And that's all there is to it
-    Ok(box TermInfo {
+    Ok(Box::new(TermInfo {
         names: term_names,
         bools: bools_map,
         numbers: numbers_map,
         strings: string_map
-    })
+    }))
 }
 
 /// Create a dummy TermInfo struct for msys terminals
@@ -308,12 +308,12 @@ pub fn msys_terminfo() -> Box<TermInfo> {
     strings.insert("bold".to_string(), b"\x1B[1m".to_vec());
     strings.insert("setaf".to_string(), b"\x1B[3%p1%dm".to_vec());
     strings.insert("setab".to_string(), b"\x1B[4%p1%dm".to_vec());
-    box TermInfo {
+    Box::new(TermInfo {
         names: vec!("cygwin".to_string()), // msys is a fork of an older cygwin version
         bools: HashMap::new(),
         numbers: HashMap::new(),
         strings: strings
-    }
+    })
 }
 
 #[cfg(test)]

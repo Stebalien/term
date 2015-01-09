@@ -181,15 +181,15 @@ impl<T: Writer+Send> TerminfoTerminal<T> {
             }
         };
 
-        let entry = open(term[]);
+        let entry = open(&term[]);
         if entry.is_err() {
             if os::getenv("MSYSCON").map_or(false, |s| {
                     "mintty.exe" == s
                 }) {
                 // msys terminal
-                return Some(box TerminfoTerminal {out: out,
-                                                  ti: msys_terminfo(),
-                                                  num_colors: 8} as Box<Terminal<T>+Send>);
+                return Some(Box::new(TerminfoTerminal {out: out,
+                                                       ti: msys_terminfo(),
+                                                       num_colors: 8}) as Box<Terminal<T>+Send>);
             }
             debug!("error finding terminfo entry: {}", entry.err().unwrap());
             return None;
@@ -208,9 +208,9 @@ impl<T: Writer+Send> TerminfoTerminal<T> {
                      inf.numbers.get("colors").map_or(0, |&n| n)
                  } else { 0 };
 
-        return Some(box TerminfoTerminal {out: out,
-                                          ti: inf,
-                                          num_colors: nc} as Box<Terminal<T>+Send>);
+        return Some(Box::new(TerminfoTerminal {out: out,
+                                               ti: inf,
+                                               num_colors: nc}) as Box<Terminal<T>+Send>);
     }
 
     fn dim_if_necessary(&self, color: color::Color) -> color::Color {
@@ -230,4 +230,3 @@ impl<T: Writer> Writer for TerminfoTerminal<T> {
         self.out.flush()
     }
 }
-
