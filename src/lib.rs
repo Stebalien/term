@@ -31,7 +31,7 @@
 //!     t.fg(term::color::RED).unwrap();
 //!     (writeln!(t, "world!")).unwrap();
 //!
-//!     t.reset().unwrap();
+//!     assert!(t.reset().unwrap());
 //! }
 //! ```
 //!
@@ -200,8 +200,10 @@ pub trait Terminal<T: Writer>: Writer {
     fn supports_attr(&self, attr: Attr) -> bool;
 
     /// Resets all terminal attributes and color to the default.
-    /// Returns `Ok()`.
-    fn reset(&mut self) -> IoResult<()>;
+    ///
+    /// Returns `Ok(true)` if the terminal was reset, `Ok(false)` otherwise, and `Err(e)` if there
+    /// was an I/O error.
+    fn reset(&mut self) -> IoResult<bool>;
 
     /// Gets an immutable reference to the stream inside
     fn get_ref<'a>(&'a self) -> &'a T;
