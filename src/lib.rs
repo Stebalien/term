@@ -91,7 +91,7 @@ pub fn stdout() -> Option<Box<Terminal<WriterWrapper> + Send>> {
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
 /// opened.
 pub fn stdout() -> Option<Box<Terminal<WriterWrapper> + Send>> {
-    let boxed = box std::io::stdio() as Box<Writer + Send>;
+    let boxed = Box::new(std::io::stdio()) as Box<Writer + Send>;
     let wrapped = WriterWrapper {wrapper: boxed};
 
     TerminfoTerminal::new(wrapped).or(WinConsole::new(wrapped));
@@ -110,7 +110,7 @@ pub fn stderr() -> Option<Box<Terminal<WriterWrapper> + Send>> {
 /// Return a Terminal wrapping stderr, or None if a terminal couldn't be
 /// opened.
 pub fn stderr() -> Option<Box<Terminal<WriterWrapper> + Send>> {
-    let boxed = box std::io::stderr() as Box<Writer + Send>;
+    let boxed = Box::new(std::io::stderr()) as Box<Writer + Send>;
     let wrapped = WriterWrapper {wrapper: boxed};
 
     TerminfoTerminal::new(wrapped).or(WinConsole::new(wrapped));
