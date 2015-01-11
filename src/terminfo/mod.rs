@@ -149,14 +149,14 @@ impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
         ].iter().filter_map(|cap| {
             self.ti.strings.get(*cap)
         }).next() {
-            Some(op) => match expand(op[], &[], &mut Variables::new()) {
+            Some(op) => match expand(&op[], &[], &mut Variables::new()) {
                 Ok(cmd) => cmd,
                 Err(_) => return Ok(false),
             },
             None => return Ok(false),
         };
 
-        self.out.write(cmd[]).map(|_|true)
+        self.out.write(&cmd[]).map(|_|true)
     }
 
     fn get_ref<'a>(&'a self) -> &'a T { &self.out }
