@@ -123,9 +123,9 @@ impl<T: Writer+Send> WinConsole<T> {
                 bg = color::BLACK;
             }
         }
-        Some(box WinConsole { buf: out,
-                              def_foreground: fg, def_background: bg,
-                              foreground: fg, background: bg } as Box<Terminal<T>+Send>)
+        Some(Box::new(WinConsole { buf: out,
+                                   def_foreground: fg, def_background: bg,
+                                   foreground: fg, background: bg }) as Box<Terminal<T>+Send>)
     }
 }
 
