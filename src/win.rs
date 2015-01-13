@@ -170,7 +170,7 @@ impl<T: Writer+Send> Terminal<T> for WinConsole<T> {
         }
     }
 
-    fn supports_attr(&self, attr: Attr::Attr) -> bool {
+    fn supports_attr(&self, attr: Attr) -> bool {
         // it claims support for underscore and reverse video, but I can't get
         // it to do anything -cmr
         match attr {
