@@ -16,7 +16,7 @@ extern crate libc;
 
 use std::io::IoResult;
 
-use attr;
+use Attr;
 use color;
 use {Terminal,UnwrappableTerminal};
 
@@ -154,14 +154,14 @@ impl<T: Writer+Send> Terminal<T> for WinConsole<T> {
         Ok(true)
     }
 
-    fn attr(&mut self, attr: attr::Attr) -> IoResult<bool> {
+    fn attr(&mut self, attr: Attr) -> IoResult<bool> {
         match attr {
-            attr::ForegroundColor(f) => {
+            Attr::ForegroundColor(f) => {
                 self.foreground = f;
                 self.apply();
                 Ok(true)
             },
-            attr::BackgroundColor(b) => {
+            Attr::BackgroundColor(b) => {
                 self.background = b;
                 self.apply();
                 Ok(true)
@@ -170,11 +170,11 @@ impl<T: Writer+Send> Terminal<T> for WinConsole<T> {
         }
     }
 
-    fn supports_attr(&self, attr: attr::Attr) -> bool {
+    fn supports_attr(&self, attr: Attr::Attr) -> bool {
         // it claims support for underscore and reverse video, but I can't get
         // it to do anything -cmr
         match attr {
-            attr::ForegroundColor(_) | attr::BackgroundColor(_) => true,
+            Attr::ForegroundColor(_) | Attr::BackgroundColor(_) => true,
             _ => false
         }
     }
