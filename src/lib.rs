@@ -53,71 +53,55 @@ pub use terminfo::TerminfoTerminal;
 #[cfg(windows)]
 pub use win::WinConsole;
 
-use std::io::IoResult;
+use std::io::{IoResult, LineBufferedWriter};
+use std::io::stdio::StdWriter;
 
 pub mod terminfo;
 
 #[cfg(windows)]
 mod win;
 
-/// A hack to work around the fact that `Box<Writer + Send>` does not
-/// currently implement `Writer`.
-pub struct WriterWrapper {
-    wrapped: Box<Writer + Send>,
-}
-
-impl Writer for WriterWrapper {
-    #[inline]
-    fn write(&mut self, buf: &[u8]) -> IoResult<()> {
-        self.wrapped.write(buf)
-    }
-
-    #[inline]
-    fn flush(&mut self) -> IoResult<()> {
-        self.wrapped.flush()
-    }
-}
+/// Alias for stderr/stdout terminals.
+pub type StdTerminal = Terminal<LineBufferedWriter<StdWriter>> + Send;
 
 #[cfg(not(windows))]
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
 /// opened.
-pub fn stdout() -> Option<Box<Terminal<WriterWrapper> + Send>> {
-    TerminfoTerminal::new(WriterWrapper {
-        wrapped: Box::new(std::io::stdout()) as Box<Writer + Send>,
+pub fn stdout() -> Option<Box<StdTerminal>> {
+    TerminfoTerminal::new(std::io::stdout()).map(|t| {
+        Box::new(t) as Box<StdTerminal>
     })
 }
 
 #[cfg(windows)]
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
 /// opened.
-pub fn stdout() -> Option<Box<Terminal<WriterWrapper> + Send>> {
-    let boxed = Box::new(std::io::stdout()) as Box<Writer + Send>;
-    let wrapped1 = WriterWrapper {wrapped: boxed};
-    let boxed = Box::new(std::io::stdout()) as Box<Writer + Send>;
-    let wrapped2 = WriterWrapper {wrapped: boxed};
-
-    TerminfoTerminal::new(wrapped1).or(WinConsole::new(wrapped2))
+pub fn stdout() -> Option<Box<StdTerminal>> {
+    TerminfoTerminal::new(std::io::stdout()).map(|t| {
+        Box::new(t) as Box<StdTerminal>
+    }).or_else(|| WinConsole::new(std::io::stdout()).map(|t| {
+        Box::new(t) as Box<StdTerminal>
+    }))
 }
 
 #[cfg(not(windows))]
 /// Return a Terminal wrapping stderr, or None if a terminal couldn't be
 /// opened.
-pub fn stderr() -> Option<Box<Terminal<WriterWrapper> + Send>> {
-    TerminfoTerminal::new(WriterWrapper {
-        wrapped: Box::new(std::io::stderr()) as Box<Writer + Send>,
+pub fn stderr() -> Option<Box<StdTerminal>> {
+    TerminfoTerminal::new(std::io::stderr()).map(|t| {
+        Box::new(t) as Box<StdTerminal>
     })
 }
 
 #[cfg(windows)]
 /// Return a Terminal wrapping stderr, or None if a terminal couldn't be
 /// opened.
-pub fn stderr() -> Option<Box<Terminal<WriterWrapper> + Send>> {
-    let boxed = Box::new(std::io::stderr()) as Box<Writer + Send>;
-    let wrapped1 = WriterWrapper {wrapped: boxed};
-    let boxed = Box::new(std::io::stderr()) as Box<Writer + Send>;
-    let wrapped2 = WriterWrapper {wrapped: boxed};
-
-    TerminfoTerminal::new(wrapped1).or(WinConsole::new(wrapped2))
+pub fn stderr() -> Option<Box<StdTerminal>> {
+    TerminfoTerminal::new(std::io::stderr()).map(|t| {
+        Box::new(t) as Box<StdTerminal>
+    }).or_else(|| WinConsole::new(std::io::stderr()).map(|t| {
+        Box::new(t) as Box<StdTerminal>
+    }))
 }
 
 

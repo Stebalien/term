@@ -110,7 +110,7 @@ impl<T: Writer+Send> WinConsole<T> {
 
     /// Returns `None` whenever the terminal cannot be created for some
     /// reason.
-    pub fn new(out: T) -> Option<Box<Terminal<T>+Send+'static>> {
+    pub fn new(out: T) -> Option<Winconsole<T>> {
         let fg;
         let bg;
         unsafe {
@@ -123,9 +123,13 @@ impl<T: Writer+Send> WinConsole<T> {
                 bg = color::BLACK;
             }
         }
-        Some(Box::new(WinConsole { buf: out,
-                                   def_foreground: fg, def_background: bg,
-                                   foreground: fg, background: bg }) as Box<Terminal<T>+Send>)
+        Some(WinConsole {
+            buf: out,
+            def_foreground: fg,
+            def_background: bg,
+            foreground: fg,
+            background: bg,
+        })
     }
 }
 

@@ -18,7 +18,7 @@ use std::os::getenv;
 use std::os;
 
 /// Return path to database entry for `term`
-pub fn get_dbpath_for_term(term: &str) -> Option<Box<Path>> {
+pub fn get_dbpath_for_term(term: &str) -> Option<Path> {
     if term.len() == 0 {
         return None;
     }
@@ -63,13 +63,13 @@ pub fn get_dbpath_for_term(term: &str) -> Option<Box<Path>> {
             let f = first_char.to_string();
             let newp = p.join_many(&[&f[], term]);
             if newp.exists() {
-                return Some(Box::new(newp));
+                return Some(newp);
             }
             // on some installations the dir is named after the hex of the char (e.g. OS X)
             let f = format!("{:x}", first_char as uint);
             let newp = p.join_many(&[&f[], term]);
             if newp.exists() {
-                return Some(Box::new(newp));
+                return Some(newp);
             }
         }
     }
@@ -80,7 +80,7 @@ pub fn get_dbpath_for_term(term: &str) -> Option<Box<Path>> {
 pub fn open(term: &str) -> Result<File, String> {
     match get_dbpath_for_term(term) {
         Some(x) => {
-            match File::open(&*x) {
+            match File::open(&x) {
                 Ok(file) => Ok(file),
                 Err(e) => Err(format!("error opening file: {}", e)),
             }
