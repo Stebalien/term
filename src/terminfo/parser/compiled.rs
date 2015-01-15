@@ -308,10 +308,14 @@ pub fn msys_terminfo() -> TermInfo {
     strings.insert("bold".to_string(), b"\x1B[1m".to_vec());
     strings.insert("setaf".to_string(), b"\x1B[3%p1%dm".to_vec());
     strings.insert("setab".to_string(), b"\x1B[4%p1%dm".to_vec());
+
+    let mut numbers = HashMap::new();
+    numbers.insert("colors".to_string(), 8u16);
+
     TermInfo {
         names: vec!("cygwin".to_string()), // msys is a fork of an older cygwin version
         bools: HashMap::new(),
-        numbers: HashMap::new(),
+        numbers: numbers,
         strings: strings
     }
 }
