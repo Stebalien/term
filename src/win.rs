@@ -12,7 +12,8 @@
 
 // FIXME (#13400): this is only a tiny fraction of the Windows console api
 
-extern crate libc;
+extern crate "kernel32-sys" as kernel32;
+extern crate winapi;
 
 use std::io::IoResult;
 
@@ -27,25 +28,6 @@ pub struct WinConsole<T> {
     def_background: color::Color,
     foreground: color::Color,
     background: color::Color,
-}
-
-#[allow(non_snake_case)]
-#[repr(C)]
-struct CONSOLE_SCREEN_BUFFER_INFO {
-    dwSize: [libc::c_short; 2],
-    dwCursorPosition: [libc::c_short; 2],
-    wAttributes: libc::WORD,
-    srWindow: [libc::c_short; 4],
-    dwMaximumWindowSize: [libc::c_short; 2],
-}
-
-#[allow(non_snake_case)]
-#[link(name = "kernel32")]
-extern "system" {
-    fn SetConsoleTextAttribute(handle: libc::HANDLE, attr: libc::WORD) -> libc::BOOL;
-    fn GetStdHandle(which: libc::DWORD) -> libc::HANDLE;
-    fn GetConsoleScreenBufferInfo(handle: libc::HANDLE,
-                                  info: *mut CONSOLE_SCREEN_BUFFER_INFO) -> libc::BOOL;
 }
 
 fn color_to_bits(color: color::Color) -> u16 {
@@ -89,7 +71,7 @@ fn bits_to_color(bits: u16) -> color::Color {
 impl<T: Writer+Send> WinConsole<T> {
     fn apply(&mut self) {
         let _unused = self.buf.flush();
-        let mut accum: libc::WORD = 0;
+        let mut accum: winapi::WORD = 0;
         accum |= color_to_bits(self.foreground);
         accum |= color_to_bits(self.background) << 4;
 
@@ -103,19 +85,20 @@ impl<T: Writer+Send> WinConsole<T> {
             // terminal! Admittedly, this is fragile, since stderr could be
             // redirected to a different console. This is good enough for
             // rustc though. See #13400.
-            let out = GetStdHandle(-11);
-            SetConsoleTextAttribute(out, accum);
+            let out = kernel32::GetStdHandle(-11);
+            kernel32::SetConsoleTextAttribute(out, accum);
         }
     }
 
     /// Returns `None` whenever the terminal cannot be created for some
     /// reason.
-    pub fn new(out: T) -> Option<Winconsole<T>> {
+    pub fn new(out: T) -> Option<WinConsole<T>> {
         let fg;
         let bg;
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
-            if GetConsoleScreenBufferInfo(GetStdHandle(-11), &mut buffer_info) != 0 {
+            let out = kernel32::GetStdHandle(-11);
+            if kernel32::GetConsoleScreenBufferInfo(out, &mut buffer_info) != 0 {
                 fg = bits_to_color(buffer_info.wAttributes);
                 bg = bits_to_color(buffer_info.wAttributes >> 4);
             } else {
