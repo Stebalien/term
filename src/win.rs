@@ -110,7 +110,7 @@ impl<T: Writer+Send> WinConsole<T> {
 
     /// Returns `None` whenever the terminal cannot be created for some
     /// reason.
-    pub fn new(out: T) -> Option<Winconsole<T>> {
+    pub fn new(out: T) -> Option<WinConsole<T>> {
         let fg;
         let bg;
         unsafe {
