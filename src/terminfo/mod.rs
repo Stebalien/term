@@ -12,6 +12,7 @@
 
 use std::collections::HashMap;
 use std::error::Error as ErrorTrait;
+use std::fmt;
 use std::io::{self, IoError, IoErrorKind, IoResult, File};
 use std::os;
 
@@ -51,20 +52,22 @@ pub enum Error {
 impl ErrorTrait for Error {
     fn description(&self) -> &str { "failed to create TermInfo" }
 
-    fn detail(&self) -> Option<String> {
-        use self::Error::*;
-        match self {
-            &TermUnset => None,
-            &MalformedTerminfo(ref e) => Some(e.clone()),
-            &IoError(ref e) => e.detail()
-        }
-    }
-
     fn cause(&self) -> Option<&ErrorTrait> {
         use self::Error::*;
         match self {
             &IoError(ref e) => Some(e),
             _ => None,
+        }
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::Error::*;
+        match self {
+            &TermUnset => Ok(()),
+            &MalformedTerminfo(ref e) => e.fmt(f),
+            &IoError(ref e) => e.fmt(f),
         }
     }
 }
