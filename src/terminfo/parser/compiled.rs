@@ -13,7 +13,7 @@
 //! ncurses-compatible compiled terminfo format parsing (term(5))
 
 use std::collections::HashMap;
-use std::io;
+use std::old_io;
 use super::super::TermInfo;
 
 // These are the orders ncurses uses in its compiled format (as of 5.9). Not sure if portable.
@@ -158,7 +158,7 @@ pub static stringnames: &'static[&'static str] = &[ "cbt", "_", "cr", "csr", "tb
     "box1"];
 
 /// Parse a compiled terminfo entry, using long capability names if `longnames` is true
-pub fn parse(file: &mut io::Reader, longnames: bool)
+pub fn parse(file: &mut old_io::Reader, longnames: bool)
              -> Result<TermInfo, String> {
     macro_rules! try( ($e:expr) => (
         match $e {
