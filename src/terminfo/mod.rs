@@ -26,7 +26,7 @@ use self::parm::{expand, Variables, Param};
 
 
 /// A parsed terminfo database entry.
-#[derive(Show)]
+#[derive(Debug)]
 pub struct TermInfo {
     /// Names for the terminal
     pub names: Vec<String> ,

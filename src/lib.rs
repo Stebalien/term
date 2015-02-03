@@ -19,7 +19,6 @@
 //! # Examples
 //!
 //! ```no_run
-//! # #![allow(unstable)]
 //! extern crate term;
 //!
 //! fn main() {
@@ -43,9 +42,8 @@
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/nightly/",
        html_playground_url = "http://play.rust-lang.org/")]
-#![feature(int_uint)]
+#![feature(int_uint, io, collections, core, unicode, std_misc, path, os)]
 #![deny(missing_docs)]
-#![allow(unstable)]
 
 #[macro_use] extern crate log;
 
@@ -134,7 +132,7 @@ pub mod color {
 /// Most attributes can only be turned on and must be turned off with term.reset().
 /// The ones that can be turned off explicitly take a boolean value.
 /// Color is also represented as an attribute for convenience.
-#[derive(Show, PartialEq, Eq, Copy)]
+#[derive(Debug, PartialEq, Eq, Copy)]
 pub enum Attr {
     /// Bold (or possibly bright) mode
     Bold,
