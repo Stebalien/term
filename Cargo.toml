@@ -13,4 +13,4 @@ A terminal formatting library
 """
 
 [dependencies]
-log = "0.1.0"
+log = "0.2.2"

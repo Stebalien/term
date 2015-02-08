@@ -53,8 +53,9 @@ pub use terminfo::TerminfoTerminal;
 #[cfg(windows)]
 pub use win::WinConsole;
 
-use std::io::{IoResult, LineBufferedWriter};
-use std::io::stdio::StdWriter;
+use std::old_io::{IoResult, LineBufferedWriter};
+use std::old_io::stdio::StdWriter;
+use std::old_io as io;
 
 pub mod terminfo;
 
@@ -68,7 +69,7 @@ pub type StdTerminal = Terminal<LineBufferedWriter<StdWriter>> + Send;
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
 /// opened.
 pub fn stdout() -> Option<Box<StdTerminal>> {
-    TerminfoTerminal::new(std::io::stdout()).map(|t| {
+    TerminfoTerminal::new(io::stdout()).map(|t| {
         Box::new(t) as Box<StdTerminal>
     })
 }
@@ -77,9 +78,9 @@ pub fn stdout() -> Option<Box<StdTerminal>> {
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
 /// opened.
 pub fn stdout() -> Option<Box<StdTerminal>> {
-    TerminfoTerminal::new(std::io::stdout()).map(|t| {
+    TerminfoTerminal::new(io::stdout()).map(|t| {
         Box::new(t) as Box<StdTerminal>
-    }).or_else(|| WinConsole::new(std::io::stdout()).map(|t| {
+    }).or_else(|| WinConsole::new(io::stdout()).map(|t| {
         Box::new(t) as Box<StdTerminal>
     }))
 }
@@ -88,7 +89,7 @@ pub fn stdout() -> Option<Box<StdTerminal>> {
 /// Return a Terminal wrapping stderr, or None if a terminal couldn't be
 /// opened.
 pub fn stderr() -> Option<Box<StdTerminal>> {
-    TerminfoTerminal::new(std::io::stderr()).map(|t| {
+    TerminfoTerminal::new(io::stderr()).map(|t| {
         Box::new(t) as Box<StdTerminal>
     })
 }
@@ -97,9 +98,9 @@ pub fn stderr() -> Option<Box<StdTerminal>> {
 /// Return a Terminal wrapping stderr, or None if a terminal couldn't be
 /// opened.
 pub fn stderr() -> Option<Box<StdTerminal>> {
-    TerminfoTerminal::new(std::io::stderr()).map(|t| {
+    TerminfoTerminal::new(io::stderr()).map(|t| {
         Box::new(t) as Box<StdTerminal>
-    }).or_else(|| WinConsole::new(std::io::stderr()).map(|t| {
+    }).or_else(|| WinConsole::new(io::stderr()).map(|t| {
         Box::new(t) as Box<StdTerminal>
     }))
 }

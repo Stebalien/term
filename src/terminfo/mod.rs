@@ -12,7 +12,8 @@
 
 use std::collections::HashMap;
 use std::error::Error as ErrorTrait;
-use std::io::{self, IoError, IoErrorKind, IoResult, File};
+use std::old_io::{IoError, IoErrorKind, IoResult, File};
+use std::old_io as io;
 use std::os;
 
 use Attr;
@@ -248,6 +249,10 @@ impl<T: Writer+Send> TerminfoTerminal<T> {
 
 impl<T: Writer> Writer for TerminfoTerminal<T> {
     fn write(&mut self, buf: &[u8]) -> IoResult<()> {
+        self.out.write(buf)
+    }
+
+    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
         self.out.write(buf)
     }
 

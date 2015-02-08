@@ -12,7 +12,7 @@
 //!
 //! Does not support hashed database, only filesystem!
 
-use std::io::fs::PathExtensions;
+use std::old_io::fs::PathExtensions;
 use std::os::getenv;
 use std::os;
 
