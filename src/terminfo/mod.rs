@@ -204,7 +204,7 @@ impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
             None => return Ok(false),
         };
 
-        self.out.write(&cmd[]).map(|_|true)
+        self.out.write_all(&cmd[]).map(|_|true)
     }
 
     fn get_ref<'a>(&'a self) -> &'a T { &self.out }
@@ -247,7 +247,7 @@ impl<T: Writer+Send> TerminfoTerminal<T> {
     fn apply_cap(&mut self, cmd: &str, params: &[Param]) -> IoResult<bool> {
         if let Some(cmd) = self.ti.strings.get(cmd) {
             if let Ok(s) = expand(cmd.as_slice(), params, &mut Variables::new()) {
-                try!(self.out.write(s.as_slice()));
+                try!(self.out.write_all(s.as_slice()));
                 return Ok(true)
             }
         }
@@ -257,12 +257,8 @@ impl<T: Writer+Send> TerminfoTerminal<T> {
 
 
 impl<T: Writer> Writer for TerminfoTerminal<T> {
-    fn write(&mut self, buf: &[u8]) -> IoResult<()> {
-        self.out.write(buf)
-    }
-
     fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
-        self.out.write(buf)
+        self.out.write_all(buf)
     }
 
     fn flush(&mut self) -> IoResult<()> {
