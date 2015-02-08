@@ -15,6 +15,7 @@ use std::error::Error as ErrorTrait;
 use std::old_io::{IoError, IoErrorKind, IoResult, File};
 use std::old_io as io;
 use std::os;
+use std::fmt;
 
 use Attr;
 use color;
@@ -26,7 +27,7 @@ use self::parm::{expand, Variables, Param};
 
 
 /// A parsed terminfo database entry.
-#[derive(Show)]
+#[derive(Debug)]
 pub struct TermInfo {
     /// Names for the terminal
     pub names: Vec<String> ,
@@ -52,20 +53,28 @@ pub enum Error {
 impl ErrorTrait for Error {
     fn description(&self) -> &str { "failed to create TermInfo" }
 
-    fn detail(&self) -> Option<String> {
-        use self::Error::*;
-        match self {
-            &TermUnset => None,
-            &MalformedTerminfo(ref e) => Some(e.clone()),
-            &IoError(ref e) => e.detail()
-        }
-    }
-
     fn cause(&self) -> Option<&ErrorTrait> {
         use self::Error::*;
         match self {
             &IoError(ref e) => Some(e),
             _ => None,
+        }
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        use self::Error::*;
+        match self {
+            &TermUnset => write!(
+                formatter,
+                "Terminfo database could not be found: TERM environment variable not set."),
+            &MalformedTerminfo(ref e) => write!(
+                formatter,
+                "Terminfo database parsing failed: {}", e),
+            &IoError(ref e) => write!(
+                formatter,
+                "Terminfo database parsing failed due to IO Error: {}", e)
         }
     }
 }
