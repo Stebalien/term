@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::error::Error as ErrorTrait;
 use std::fmt;
 use std::old_io::{self, IoError, IoErrorKind, IoResult, File};
-use std::os;
+use std::env;
 
 use Attr;
 use color;
@@ -75,12 +75,12 @@ impl fmt::Display for Error {
 impl TermInfo {
     /// Create a TermInfo based on current environment.
     pub fn from_env() -> Result<TermInfo, Error> {
-        let term = match os::getenv("TERM") {
-            Some(name) => TermInfo::from_name(&name[]),
-            None => return Err(Error::TermUnset),
+        let term = match env::var("TERM") {
+            Ok(name) => TermInfo::from_name(&name[]),
+            Err(..) => return Err(Error::TermUnset),
         };
 
-        if term.is_err() && os::getenv("MSYSCON").map_or(false, |s| "mintty.exe" == s) {
+        if term.is_err() && env::var("MSYSCON").ok().map_or(false, |s| "mintty.exe" == s) {
             // msys terminal
             Ok(msys_terminfo())
         } else {
