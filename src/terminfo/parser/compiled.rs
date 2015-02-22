@@ -177,34 +177,49 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
     let magic = try!(file.read_le_u16());
     if magic != 0x011A {
         return Err(format!("invalid magic number: expected {:x}, found {:x}",
-                           0x011A_usize, magic as usize));
+                           0x011A, magic));
     }
 
-    let names_bytes          = try!(file.read_le_i16()) as isize;
-    let bools_bytes          = try!(file.read_le_i16()) as isize;
-    let numbers_count        = try!(file.read_le_i16()) as isize;
-    let string_offsets_count = try!(file.read_le_i16()) as isize;
-    let string_table_bytes   = try!(file.read_le_i16()) as isize;
+    // According to the spec, these fields must be >= -1 where -1 means that the feature is not
+    // supported. Using 0 instead of -1 works because we skip sections with length 0.
+    macro_rules! read_nonneg {
+        () => {{
+            match try!(file.read_le_i16()) {
+                n if n >= 0 => n as usize,
+                -1 => 0,
+                _ => return Err("incompatible file: length fields must be  >= -1".to_string()),
+            }
+        }}
+    }
 
-    assert!(names_bytes > 0);
+    let names_bytes          = read_nonneg!();
+    let bools_bytes          = read_nonneg!();
+    let numbers_count        = read_nonneg!();
+    let string_offsets_count = read_nonneg!();
+    let string_table_bytes   = read_nonneg!();
 
-    if (bools_bytes as usize) > boolnames.len() {
+    if names_bytes == 0 {
+        return Err("incompatible file: names field must be \
+                    at least 1 byte wide".to_string());
+    }
+
+    if bools_bytes > boolnames.len() {
         return Err("incompatible file: more booleans than \
                     expected".to_string());
     }
 
-    if (numbers_count as usize) > numnames.len() {
+    if numbers_count > numnames.len() {
         return Err("incompatible file: more numbers than \
                     expected".to_string());
     }
 
-    if (string_offsets_count as usize) > stringnames.len() {
+    if string_offsets_count > stringnames.len() {
         return Err("incompatible file: more string offsets than \
                     expected".to_string());
     }
 
     // don't read NUL
-    let bytes = try!(file.read_exact(names_bytes as usize - 1));
+    let bytes = try!(file.read_exact(names_bytes - 1));
     let names_str = match String::from_utf8(bytes) {
         Ok(s)  => s,
         Err(_) => return Err("input not utf-8".to_string()),
@@ -213,15 +228,18 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
     let term_names: Vec<String> = names_str.split('|')
                                            .map(|s| s.to_string())
                                            .collect();
-
-    try!(file.read_byte()); // consume NUL
+    // consume NUL
+    if try!(file.read_byte()) != b'\0' {
+        return Err("incompatible file: missing null terminator \
+                   for names section".to_string());
+    }
 
     let mut bools_map = HashMap::new();
-    if bools_bytes != 0 {
+    if bools_bytes > 0 {
         for i in range(0, bools_bytes) {
             let b = try!(file.read_byte());
             if b == 1 {
-                bools_map.insert(bnames[i as usize].to_string(), true);
+                bools_map.insert(bnames[i].to_string(), true);
             }
         }
     }
@@ -231,26 +249,26 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
     }
 
     let mut numbers_map = HashMap::new();
-    if numbers_count != 0 {
+    if numbers_count > 0 {
         for i in range(0, numbers_count) {
             let n = try!(file.read_le_u16());
             if n != 0xFFFF {
-                numbers_map.insert(nnames[i as usize].to_string(), n);
+                numbers_map.insert(nnames[i].to_string(), n);
             }
         }
     }
 
     let mut string_map = HashMap::new();
 
-    if string_offsets_count != 0 {
+    if string_offsets_count > 0 {
         let mut string_offsets = Vec::with_capacity(10);
         for _ in range(0, string_offsets_count) {
             string_offsets.push(try!(file.read_le_u16()));
         }
 
-        let string_table = try!(file.read_exact(string_table_bytes as usize));
+        let string_table = try!(file.read_exact(string_table_bytes));
 
-        if string_table.len() != string_table_bytes as usize {
+        if string_table.len() != string_table_bytes {
             return Err("error: hit EOF before end of string \
                         table".to_string());
         }
@@ -276,7 +294,7 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
 
 
             // Find the offset of the NUL we want to go to
-            let nulpos = string_table[offset as usize .. string_table_bytes as usize]
+            let nulpos = string_table[offset as usize .. string_table_bytes]
                 .iter().position(|&b| b == 0);
             match nulpos {
                 Some(len) => {
