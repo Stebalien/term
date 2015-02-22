@@ -177,34 +177,34 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
     let magic = try!(file.read_le_u16());
     if magic != 0x011A {
         return Err(format!("invalid magic number: expected {:x}, found {:x}",
-                           0x011A_us, magic as usize));
+                           0x011A_usize, magic as usize));
     }
 
-    let names_bytes          = try!(file.read_le_i16()) as int;
-    let bools_bytes          = try!(file.read_le_i16()) as int;
-    let numbers_count        = try!(file.read_le_i16()) as int;
-    let string_offsets_count = try!(file.read_le_i16()) as int;
-    let string_table_bytes   = try!(file.read_le_i16()) as int;
+    let names_bytes          = try!(file.read_le_i16()) as isize;
+    let bools_bytes          = try!(file.read_le_i16()) as isize;
+    let numbers_count        = try!(file.read_le_i16()) as isize;
+    let string_offsets_count = try!(file.read_le_i16()) as isize;
+    let string_table_bytes   = try!(file.read_le_i16()) as isize;
 
     assert!(names_bytes > 0);
 
-    if (bools_bytes as uint) > boolnames.len() {
+    if (bools_bytes as usize) > boolnames.len() {
         return Err("incompatible file: more booleans than \
                     expected".to_string());
     }
 
-    if (numbers_count as uint) > numnames.len() {
+    if (numbers_count as usize) > numnames.len() {
         return Err("incompatible file: more numbers than \
                     expected".to_string());
     }
 
-    if (string_offsets_count as uint) > stringnames.len() {
+    if (string_offsets_count as usize) > stringnames.len() {
         return Err("incompatible file: more string offsets than \
                     expected".to_string());
     }
 
     // don't read NUL
-    let bytes = try!(file.read_exact(names_bytes as uint - 1));
+    let bytes = try!(file.read_exact(names_bytes as usize - 1));
     let names_str = match String::from_utf8(bytes) {
         Ok(s)  => s,
         Err(_) => return Err("input not utf-8".to_string()),
@@ -221,7 +221,7 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
         for i in range(0, bools_bytes) {
             let b = try!(file.read_byte());
             if b == 1 {
-                bools_map.insert(bnames[i as uint].to_string(), true);
+                bools_map.insert(bnames[i as usize].to_string(), true);
             }
         }
     }
@@ -235,7 +235,7 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
         for i in range(0, numbers_count) {
             let n = try!(file.read_le_u16());
             if n != 0xFFFF {
-                numbers_map.insert(nnames[i as uint].to_string(), n);
+                numbers_map.insert(nnames[i as usize].to_string(), n);
             }
         }
     }
@@ -248,9 +248,9 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
             string_offsets.push(try!(file.read_le_u16()));
         }
 
-        let string_table = try!(file.read_exact(string_table_bytes as uint));
+        let string_table = try!(file.read_exact(string_table_bytes as usize));
 
-        if string_table.len() != string_table_bytes as uint {
+        if string_table.len() != string_table_bytes as usize {
             return Err("error: hit EOF before end of string \
                         table".to_string());
         }
@@ -276,13 +276,13 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
 
 
             // Find the offset of the NUL we want to go to
-            let nulpos = string_table[offset as uint .. string_table_bytes as uint]
+            let nulpos = string_table[offset as usize .. string_table_bytes as usize]
                 .iter().position(|&b| b == 0);
             match nulpos {
                 Some(len) => {
                     string_map.insert(name.to_string(),
-                                      string_table[offset as uint ..
-                                          offset as uint + len].to_vec())
+                                      string_table[offset as usize ..
+                                          offset as usize + len].to_vec())
                 },
                 None => {
                     return Err("invalid file: missing NUL in \
