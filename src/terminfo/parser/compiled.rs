@@ -234,50 +234,40 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
                    for names section".to_string());
     }
 
-    let mut bools_map = HashMap::new();
-    if bools_bytes > 0 {
-        for i in range(0, bools_bytes) {
-            let b = try!(file.read_byte());
-            if b == 1 {
-                bools_map.insert(bnames[i].to_string(), true);
-            }
-        }
-    }
+    let bools_map: HashMap<String, bool> = try!(
+        (0..bools_bytes).filter_map(|i| match file.read_byte() {
+            Err(e) => Some(Err(e)),
+            Ok(1) => Some(Ok((bnames[i].to_string(), true))),
+            Ok(_) => None
+        }).collect());
 
     if (bools_bytes + names_bytes) % 2 == 1 {
         try!(file.read_byte()); // compensate for padding
     }
 
-    let mut numbers_map = HashMap::new();
-    if numbers_count > 0 {
-        for i in range(0, numbers_count) {
-            let n = try!(file.read_le_u16());
-            if n != 0xFFFF {
-                numbers_map.insert(nnames[i].to_string(), n);
-            }
-        }
-    }
+    let numbers_map: HashMap<String, u16> = try!(
+        (0..numbers_count).filter_map(|i| match file.read_le_u16() {
+            Ok(0xFFFF) => None,
+            Ok(n) => Some(Ok((nnames[i].to_string(), n))),
+            Err(e) => Some(Err(e))
+        }).collect());
 
-    let mut string_map = HashMap::new();
-
-    if string_offsets_count > 0 {
-        let mut string_offsets = Vec::with_capacity(10);
-        for _ in range(0, string_offsets_count) {
-            string_offsets.push(try!(file.read_le_u16()));
-        }
+    let string_map: HashMap<String, Vec<u8>> = if string_offsets_count > 0 {
+        let string_offsets: Vec<u16> = try!((0..string_offsets_count).map(|_| {
+            file.read_le_u16()
+        }).collect());
 
         let string_table = try!(file.read_exact(string_table_bytes));
 
         if string_table.len() != string_table_bytes {
-            return Err("error: hit EOF before end of string \
-                        table".to_string());
+            return Err("error: hit EOF before end of string table".to_string());
         }
 
-        for (i, v) in string_offsets.iter().enumerate() {
-            let offset = *v;
-            if offset == 0xFFFF { // non-entry
-                continue;
-            }
+        try!(string_offsets.into_iter().enumerate().filter(|&(_, offset)| {
+            // non-entry
+            offset != 0xFFFF
+        }).map(|(i, offset)| {
+            let offset = offset as usize;
 
             let name = if snames[i] == "_" {
                 stringfnames[i]
@@ -288,27 +278,19 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
             if offset == 0xFFFE {
                 // undocumented: FFFE indicates cap@, which means the capability is not present
                 // unsure if the handling for this is correct
-                string_map.insert(name.to_string(), Vec::new());
-                continue;
+                return Ok((name.to_string(), Vec::new()));
             }
 
-
             // Find the offset of the NUL we want to go to
-            let nulpos = string_table[offset as usize .. string_table_bytes]
-                .iter().position(|&b| b == 0);
+            let nulpos = string_table[offset..string_table_bytes].iter().position(|&b| b == 0);
             match nulpos {
-                Some(len) => {
-                    string_map.insert(name.to_string(),
-                                      string_table[offset as usize ..
-                                          offset as usize + len].to_vec())
-                },
-                None => {
-                    return Err("invalid file: missing NUL in \
-                                string_table".to_string());
-                }
-            };
-        }
-    }
+                Some(len) => Ok((name.to_string(), string_table[offset..offset + len].to_vec())),
+                None => Err("invalid file: missing NUL in string_table".to_string()),
+            }
+        }).collect())
+    } else {
+        HashMap::new()
+    };
 
     // And that's all there is to it
     Ok(TermInfo {
