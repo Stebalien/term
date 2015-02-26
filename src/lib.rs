@@ -43,6 +43,7 @@
        html_root_url = "http://doc.rust-lang.org/nightly/",
        html_playground_url = "http://play.rust-lang.org/")]
 #![feature(int_uint, old_io, collections, core, unicode, std_misc, old_path, env)]
+#![feature(os)]
 #![deny(missing_docs)]
 
 #[macro_use] extern crate log;

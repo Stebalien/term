@@ -14,6 +14,7 @@
 
 use std::old_io::fs::PathExtensions;
 use std::env;
+use std::os;
 
 /// Return path to database entry for `term`
 pub fn get_dbpath_for_term(term: &str) -> Option<Path> {
@@ -21,7 +22,7 @@ pub fn get_dbpath_for_term(term: &str) -> Option<Path> {
         return None;
     }
 
-    let homedir = env::home_dir();
+    let homedir = os::homedir();
 
     let mut dirs_to_search = Vec::new();
     let first_char = term.char_at(0);
