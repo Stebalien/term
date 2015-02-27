@@ -18,6 +18,7 @@ use self::FormatOp::*;
 use std::ascii::OwnedAsciiExt;
 use std::iter::repeat;
 use std::mem::replace;
+use std::num::Int;
 
 #[derive(Copy, PartialEq)]
 enum States {
@@ -28,12 +29,12 @@ enum States {
     PushParam,
     CharConstant,
     CharClose,
-    IntConstant(isize),
+    IntConstant(i16),
     FormatPattern(Flags, FormatState),
-    SeekIfElse(isize),
-    SeekIfElsePercent(isize),
-    SeekIfEnd(isize),
-    SeekIfEndPercent(isize)
+    SeekIfElse(usize),
+    SeekIfElsePercent(usize),
+    SeekIfEnd(usize),
+    SeekIfEndPercent(usize)
 }
 
 #[derive(Copy, PartialEq)]
@@ -48,7 +49,7 @@ enum FormatState {
 #[derive(Clone)]
 pub enum Param {
     Words(String),
-    Number(isize)
+    Number(i16)
 }
 
 /// Container for static and dynamic variable arrays
@@ -144,7 +145,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables)
                     '{' => state = IntConstant(0),
                     'l' => if stack.len() > 0 {
                         match stack.pop().unwrap() {
-                            Words(s) => stack.push(Number(s.len() as isize)),
+                            Words(s) => stack.push(Number(s.len() as i16)),
                             _        => return Err("a non-str was used with %l".to_string())
                         }
                     } else { return Err("stack is empty".to_string()) },
@@ -329,7 +330,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables)
                 }
             },
             CharConstant => {
-                stack.push(Number(c as isize));
+                stack.push(Number(c as i16));
                 state = CharClose;
             },
             CharClose => {
@@ -338,16 +339,19 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables)
                 }
             },
             IntConstant(i) => {
-                match cur {
-                    '}' => {
-                        stack.push(Number(i));
-                        state = Nothing;
+                if cur == '}' {
+                    stack.push(Number(i));
+                    state = Nothing;
+                } else if let Some(digit) = cur.to_digit(10) {
+                    match i.checked_mul(10).and_then(|i_ten|i_ten.checked_add(digit as i16)) {
+                        Some(i) => {
+                            state = IntConstant(i);
+                            old_state = Nothing;
+                        }
+                        None => return Err("int constant too large".to_string())
                     }
-                    '0'...'9' => {
-                        state = IntConstant(i*10 + (cur as isize - '0' as isize));
-                        old_state = Nothing;
-                    }
-                    _ => return Err("bad int constant".to_string())
+                } else {
+                    return Err("bad int constant".to_string());
                 }
             }
             FormatPattern(ref mut flags, ref mut fstate) => {
