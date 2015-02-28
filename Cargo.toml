@@ -12,9 +12,6 @@ description = """
 A terminal formatting library
 """
 
-[dependencies]
-log = "0.2.0"
-
 [target.i686-pc-windows-gnu.dependencies]
 winapi = "*"
 kernel32-sys = "*"

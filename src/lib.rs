@@ -46,8 +46,6 @@
 #![feature(os)]
 #![deny(missing_docs)]
 
-#[macro_use] extern crate log;
-
 pub use terminfo::TerminfoTerminal;
 #[cfg(windows)]
 pub use win::WinConsole;
