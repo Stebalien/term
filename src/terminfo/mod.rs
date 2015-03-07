@@ -12,9 +12,10 @@
 
 use std::collections::HashMap;
 use std::error::Error as ErrorTrait;
-use std::fmt;
-use std::old_io::{self, IoError, IoErrorKind, IoResult, File};
-use std::env;
+use std::{fmt, env};
+use std::io::{self, Write};
+use std::fs::File;
+use std::path::Path;
 
 use Attr;
 use color;
@@ -45,8 +46,8 @@ pub enum Error {
     TermUnset,
     /// MalformedTerminfo indicates that parsing the terminfo entry failed.
     MalformedTerminfo(String),
-    /// IoError forwards any IoErrors encountered when finding or reading the terminfo entry.
-    IoError(IoError),
+    /// io::Error forwards any io::Errors encountered when finding or reading the terminfo entry.
+    IoError(io::Error),
 }
 
 impl ErrorTrait for Error {
@@ -91,7 +92,7 @@ impl TermInfo {
     /// Create a TermInfo for the named terminal.
     pub fn from_name(name: &str) -> Result<TermInfo, Error> {
         get_dbpath_for_term(name).ok_or_else(|| {
-            Error::IoError(old_io::standard_error(IoErrorKind::FileNotFound))
+            Error::IoError(io::Error::new(io::ErrorKind::FileNotFound, "terminfo file not found", None))
         }).and_then(|p| {
             TermInfo::from_path(&p)
         })
@@ -145,8 +146,8 @@ pub struct TerminfoTerminal<T> {
     ti: TermInfo,
 }
 
-impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
-    fn fg(&mut self, color: color::Color) -> IoResult<bool> {
+impl<T: Write+Send> Terminal<T> for TerminfoTerminal<T> {
+    fn fg(&mut self, color: color::Color) -> io::Result<bool> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
             return self.apply_cap("setaf", &[Param::Number(color as i16)]);
@@ -154,7 +155,7 @@ impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
         Ok(false)
     }
 
-    fn bg(&mut self, color: color::Color) -> IoResult<bool> {
+    fn bg(&mut self, color: color::Color) -> io::Result<bool> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
             return self.apply_cap("setab", &[Param::Number(color as i16)]);
@@ -162,7 +163,7 @@ impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
         Ok(false)
     }
 
-    fn attr(&mut self, attr: Attr) -> IoResult<bool> {
+    fn attr(&mut self, attr: Attr) -> io::Result<bool> {
         match attr {
             Attr::ForegroundColor(c) => self.fg(c),
             Attr::BackgroundColor(c) => self.bg(c),
@@ -182,7 +183,7 @@ impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
         }
     }
 
-    fn reset(&mut self) -> IoResult<bool> {
+    fn reset(&mut self) -> io::Result<bool> {
         // are there any terminals that have color/attrs and not sgr0?
         // Try falling back to sgr, then op
         let cmd = match [
@@ -205,12 +206,12 @@ impl<T: Writer+Send> Terminal<T> for TerminfoTerminal<T> {
     fn get_mut<'a>(&'a mut self) -> &'a mut T { &mut self.out }
 }
 
-impl<T: Writer+Send> UnwrappableTerminal<T> for TerminfoTerminal<T> {
+impl<T: Write+Send> UnwrappableTerminal<T> for TerminfoTerminal<T> {
     fn unwrap(self) -> T { self.out }
 }
 
-impl<T: Writer+Send> TerminfoTerminal<T> {
-    /// Create a new TerminfoTerminal with the given TermInfo and Writer.
+impl<T: Write+Send> TerminfoTerminal<T> {
+    /// Create a new TerminfoTerminal with the given TermInfo and Write.
     pub fn new_with_terminfo(out: T, terminfo: TermInfo) -> TerminfoTerminal<T> {
         let nc = if terminfo.strings.contains_key("setaf")
                  && terminfo.strings.contains_key("setab") {
@@ -224,7 +225,7 @@ impl<T: Writer+Send> TerminfoTerminal<T> {
         }
     }
 
-    /// Create a new TerminfoTerminal for the current environment with the given Writer.
+    /// Create a new TerminfoTerminal for the current environment with the given Write.
     ///
     /// Returns `None` when the terminfo cannot be found or parsed.
     pub fn new(out: T) -> Option<TerminfoTerminal<T>> {
@@ -237,7 +238,7 @@ impl<T: Writer+Send> TerminfoTerminal<T> {
         } else { color }
     }
 
-    fn apply_cap(&mut self, cmd: &str, params: &[Param]) -> IoResult<bool> {
+    fn apply_cap(&mut self, cmd: &str, params: &[Param]) -> io::Result<bool> {
         if let Some(cmd) = self.ti.strings.get(cmd) {
             if let Ok(s) = expand(cmd.as_slice(), params, &mut Variables::new()) {
                 try!(self.out.write_all(s.as_slice()));
@@ -249,12 +250,12 @@ impl<T: Writer+Send> TerminfoTerminal<T> {
 }
 
 
-impl<T: Writer> Writer for TerminfoTerminal<T> {
-    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
-        self.out.write_all(buf)
+impl<T: Write> Write for TerminfoTerminal<T> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.out.write(buf)
     }
 
-    fn flush(&mut self) -> IoResult<()> {
+    fn flush(&mut self) -> io::Result<()> {
         self.out.flush()
     }
 }

@@ -12,35 +12,34 @@
 //!
 //! Does not support hashed database, only filesystem!
 
-use std::old_io::fs::PathExtensions;
+use std::fs::PathExt;
 use std::env;
-use std::os;
+use std::path::PathBuf;
 
 /// Return path to database entry for `term`
-pub fn get_dbpath_for_term(term: &str) -> Option<Path> {
+pub fn get_dbpath_for_term(term: &str) -> Option<PathBuf> {
     if term.len() == 0 {
         return None;
     }
-
-    let homedir = os::homedir();
 
     let mut dirs_to_search = Vec::new();
     let first_char = term.char_at(0);
 
     // Find search directory
-    match env::var("TERMINFO") {
-        Ok(dir) => dirs_to_search.push(Path::new(dir)),
-        Err(..) => {
-            if homedir.is_some() {
+    match env::var_os("TERMINFO") {
+        Some(dir) => dirs_to_search.push(PathBuf::new(&dir)),
+        None => {
+            if let Some(mut homedir) = env::home_dir() {
                 // ncurses compatibility;
-                dirs_to_search.push(homedir.unwrap().join(".terminfo"))
+                homedir.push(".terminfo");
+                dirs_to_search.push(homedir)
             }
             match env::var("TERMINFO_DIRS") {
                 Ok(dirs) => for i in dirs.split(':') {
                     if i == "" {
-                        dirs_to_search.push(Path::new("/usr/share/terminfo"));
+                        dirs_to_search.push(PathBuf::new("/usr/share/terminfo"));
                     } else {
-                        dirs_to_search.push(Path::new(i));
+                        dirs_to_search.push(PathBuf::new(i));
                     }
                 },
                 // Found nothing in TERMINFO_DIRS, use the default paths:
@@ -48,27 +47,30 @@ pub fn get_dbpath_for_term(term: &str) -> Option<Path> {
                 // ~/.terminfo, ncurses will search /etc/terminfo, then
                 // /lib/terminfo, and eventually /usr/share/terminfo.
                 Err(..) => {
-                    dirs_to_search.push(Path::new("/etc/terminfo"));
-                    dirs_to_search.push(Path::new("/lib/terminfo"));
-                    dirs_to_search.push(Path::new("/usr/share/terminfo"));
+                    dirs_to_search.push(PathBuf::new("/etc/terminfo"));
+                    dirs_to_search.push(PathBuf::new("/lib/terminfo"));
+                    dirs_to_search.push(PathBuf::new("/usr/share/terminfo"));
                 }
             }
         }
     };
 
     // Look for the terminal in all of the search directories
-    for p in dirs_to_search.iter() {
+    for mut p in dirs_to_search {
         if p.exists() {
-            let f: &str = &first_char.to_string();
-            let newp = p.join_many(&[f, term]);
-            if newp.exists() {
-                return Some(newp);
+            p.push(&first_char.to_string());
+            p.push(&term);
+            if p.exists() {
+                return Some(p);
             }
+            p.pop();
+            p.pop();
+
             // on some installations the dir is named after the hex of the char (e.g. OS X)
-            let f: &str = &format!("{:x}", first_char as usize);
-            let newp = p.join_many(&[f, term]);
-            if newp.exists() {
-                return Some(newp);
+            p.push(&format!("{:x}", first_char as usize));
+            p.push(term);
+            if p.exists() {
+                return Some(p);
             }
         }
     }

@@ -13,7 +13,8 @@
 //! ncurses-compatible compiled terminfo format parsing (term(5))
 
 use std::collections::HashMap;
-use std::old_io;
+use std::io;
+use byteorder::{ReadBytesExt, LittleEndian};
 use super::super::TermInfo;
 
 // These are the orders ncurses uses in its compiled format (as of 5.9). Not sure if portable.
@@ -157,8 +158,22 @@ pub static stringnames: &'static[&'static str] = &[ "cbt", "_", "cr", "csr", "tb
     "OTG3", "OTG1", "OTG4", "OTGR", "OTGL", "OTGU", "OTGD", "OTGH", "OTGV", "OTGC", "meml", "memu",
     "box1"];
 
+fn read_harder<R: io::Read>(reader: &mut R, buffer: &mut [u8]) -> io::Result<usize> {
+        let mut offset = 0;
+        while offset < buffer.len() {
+            match reader.read(&mut buffer[offset..]) {
+                Ok(0) => break,
+                Ok(n) => offset += n,
+                Err(ref e) if e.kind() == io::ErrorKind::Interrupted => (),
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(offset)
+}
+
 /// Parse a compiled terminfo entry, using long capability names if `longnames` is true
-pub fn parse(file: &mut old_io::Reader, longnames: bool)
+// TODO: FIXME: file should not be mut: issue #22888
+pub fn parse(mut file: &mut io::Read, longnames: bool)
              -> Result<TermInfo, String> {
     macro_rules! try( ($e:expr) => (
         match $e {
@@ -174,7 +189,7 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
     };
 
     // Check magic number
-    let magic = try!(file.read_le_u16());
+    let magic = try!(file.read_u16::<LittleEndian>());
     if magic != 0x011A {
         return Err(format!("invalid magic number: expected {:x}, found {:x}",
                            0x011A, magic));
@@ -184,7 +199,7 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
     // supported. Using 0 instead of -1 works because we skip sections with length 0.
     macro_rules! read_nonneg {
         () => {{
-            match try!(file.read_le_i16()) {
+            match try!(file.read_i16::<LittleEndian>()) {
                 n if n >= 0 => n as usize,
                 -1 => 0,
                 _ => return Err("incompatible file: length fields must be  >= -1".to_string()),
@@ -219,7 +234,10 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
     }
 
     // don't read NUL
-    let bytes = try!(file.read_exact(names_bytes - 1));
+    let mut bytes = vec![0u8; names_bytes - 1];
+    if try!(read_harder(&mut file, &mut bytes)) != names_bytes - 1 {
+        return Err("error: hit EOF before end of names table".to_string());
+    }
     let names_str = match String::from_utf8(bytes) {
         Ok(s)  => s,
         Err(_) => return Err("input not utf-8".to_string()),
@@ -229,24 +247,24 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
                                            .map(|s| s.to_string())
                                            .collect();
     // consume NUL
-    if try!(file.read_byte()) != b'\0' {
+    if try!(file.read_u8()) != b'\0' {
         return Err("incompatible file: missing null terminator \
                    for names section".to_string());
     }
 
     let bools_map: HashMap<String, bool> = try!(
-        (0..bools_bytes).filter_map(|i| match file.read_byte() {
+        (0..bools_bytes).filter_map(|i| match file.read_u8() {
             Err(e) => Some(Err(e)),
             Ok(1) => Some(Ok((bnames[i].to_string(), true))),
             Ok(_) => None
         }).collect());
 
     if (bools_bytes + names_bytes) % 2 == 1 {
-        try!(file.read_byte()); // compensate for padding
+        try!(file.read_u8()); // compensate for padding
     }
 
     let numbers_map: HashMap<String, u16> = try!(
-        (0..numbers_count).filter_map(|i| match file.read_le_u16() {
+        (0..numbers_count).filter_map(|i| match file.read_u16::<LittleEndian>() {
             Ok(0xFFFF) => None,
             Ok(n) => Some(Ok((nnames[i].to_string(), n))),
             Err(e) => Some(Err(e))
@@ -254,12 +272,11 @@ pub fn parse(file: &mut old_io::Reader, longnames: bool)
 
     let string_map: HashMap<String, Vec<u8>> = if string_offsets_count > 0 {
         let string_offsets: Vec<u16> = try!((0..string_offsets_count).map(|_| {
-            file.read_le_u16()
+            file.read_u16::<LittleEndian>()
         }).collect());
 
-        let string_table = try!(file.read_exact(string_table_bytes));
-
-        if string_table.len() != string_table_bytes {
+        let mut string_table = vec![0u8; string_table_bytes];
+        if try!(read_harder(&mut file, &mut string_table)) != string_table_bytes {
             return Err("error: hit EOF before end of string table".to_string());
         }
 

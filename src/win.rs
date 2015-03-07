@@ -15,7 +15,7 @@
 extern crate "kernel32-sys" as kernel32;
 extern crate winapi;
 
-use std::old_io::IoResult;
+use std::io::{self, Write};
 
 use Attr;
 use color;
@@ -68,7 +68,7 @@ fn bits_to_color(bits: u16) -> color::Color {
     color | (bits & 0x8) // copy the hi-intensity bit
 }
 
-impl<T: Writer+Send> WinConsole<T> {
+impl<T: Write+Send> WinConsole<T> {
     fn apply(&mut self) {
         let _unused = self.buf.flush();
         let mut accum: winapi::WORD = 0;
@@ -116,32 +116,32 @@ impl<T: Writer+Send> WinConsole<T> {
     }
 }
 
-impl<T: Writer> Writer for WinConsole<T> {
-    fn write_all(&mut self, buf: &[u8]) -> IoResult<()> {
-        self.buf.write_all(buf)
+impl<T: Write> Write for WinConsole<T> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.buf.write(buf)
     }
 
-    fn flush(&mut self) -> IoResult<()> {
+    fn flush(&mut self) -> io::Result<()> {
         self.buf.flush()
     }
 }
 
-impl<T: Writer+Send> Terminal<T> for WinConsole<T> {
-    fn fg(&mut self, color: color::Color) -> IoResult<bool> {
+impl<T: Write+Send> Terminal<T> for WinConsole<T> {
+    fn fg(&mut self, color: color::Color) -> io::Result<bool> {
         self.foreground = color;
         self.apply();
 
         Ok(true)
     }
 
-    fn bg(&mut self, color: color::Color) -> IoResult<bool> {
+    fn bg(&mut self, color: color::Color) -> io::Result<bool> {
         self.background = color;
         self.apply();
 
         Ok(true)
     }
 
-    fn attr(&mut self, attr: Attr) -> IoResult<bool> {
+    fn attr(&mut self, attr: Attr) -> io::Result<bool> {
         match attr {
             Attr::ForegroundColor(f) => {
                 self.foreground = f;
@@ -166,7 +166,7 @@ impl<T: Writer+Send> Terminal<T> for WinConsole<T> {
         }
     }
 
-    fn reset(&mut self) -> IoResult<bool> {
+    fn reset(&mut self) -> io::Result<bool> {
         self.foreground = self.def_foreground;
         self.background = self.def_background;
         self.apply();
@@ -179,6 +179,6 @@ impl<T: Writer+Send> Terminal<T> for WinConsole<T> {
     fn get_mut<'a>(&'a mut self) -> &'a mut T { &mut self.buf }
 }
 
-impl<T: Writer+Send> UnwrappableTerminal<T> for WinConsole<T> {
+impl<T: Write+Send> UnwrappableTerminal<T> for WinConsole<T> {
     fn unwrap(self) -> T { self.buf }
 }

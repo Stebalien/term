@@ -12,6 +12,9 @@ description = """
 A terminal formatting library
 """
 
+[dependencies]
+byteorder = "*"
+
 [target.i686-pc-windows-gnu.dependencies]
 winapi = "*"
 kernel32-sys = "*"

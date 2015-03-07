@@ -20,6 +20,7 @@
 //!
 //! ```no_run
 //! extern crate term;
+//! use std::io::Write;
 //!
 //! fn main() {
 //!     let mut t = term::stdout().unwrap();
@@ -42,62 +43,64 @@
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/nightly/",
        html_playground_url = "http://play.rust-lang.org/")]
-#![feature(old_io, collections, core, unicode, std_misc, old_path, env)]
-#![feature(os)]
+#![feature(collections, core, unicode, std_misc, io, path, path_ext)]
 #![deny(missing_docs)]
+
+extern crate byteorder;
 
 pub use terminfo::TerminfoTerminal;
 #[cfg(windows)]
 pub use win::WinConsole;
 
-use std::old_io::{IoResult, LineBufferedWriter};
-use std::old_io::stdio::StdWriter;
+use std::io::{self, Stdout, Stderr, Write};
 
 pub mod terminfo;
 
 #[cfg(windows)]
 mod win;
 
-/// Alias for stderr/stdout terminals.
-pub type StdTerminal = Terminal<LineBufferedWriter<StdWriter>> + Send;
+/// Alias for stderr terminals.
+pub type StdoutTerminal = Terminal<Stdout> + Send;
+/// Alias for stderr terminals.
+pub type StderrTerminal = Terminal<Stderr> + Send;
 
 #[cfg(not(windows))]
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
 /// opened.
-pub fn stdout() -> Option<Box<StdTerminal>> {
-    TerminfoTerminal::new(std::old_io::stdout()).map(|t| {
-        Box::new(t) as Box<StdTerminal>
+pub fn stdout() -> Option<Box<StdoutTerminal>> {
+    TerminfoTerminal::new(io::stdout()).map(|t| {
+        Box::new(t) as Box<StdoutTerminal>
     })
 }
 
 #[cfg(windows)]
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
 /// opened.
-pub fn stdout() -> Option<Box<StdTerminal>> {
-    TerminfoTerminal::new(std::old_io::stdout()).map(|t| {
-        Box::new(t) as Box<StdTerminal>
-    }).or_else(|| WinConsole::new(std::old_io::stdout()).map(|t| {
-        Box::new(t) as Box<StdTerminal>
+pub fn stdout() -> Option<Box<StdoutTerminal>> {
+    TerminfoTerminal::new(io::stdout()).map(|t| {
+        Box::new(t) as Box<StdoutTerminal>
+    }).or_else(|| WinConsole::new(io::stdout()).map(|t| {
+        Box::new(t) as Box<StdoutTerminal>
     }))
 }
 
 #[cfg(not(windows))]
 /// Return a Terminal wrapping stderr, or None if a terminal couldn't be
 /// opened.
-pub fn stderr() -> Option<Box<StdTerminal>> {
-    TerminfoTerminal::new(std::old_io::stderr()).map(|t| {
-        Box::new(t) as Box<StdTerminal>
+pub fn stderr() -> Option<Box<StderrTerminal>> {
+    TerminfoTerminal::new(io::stderr()).map(|t| {
+        Box::new(t) as Box<StderrTerminal>
     })
 }
 
 #[cfg(windows)]
 /// Return a Terminal wrapping stderr, or None if a terminal couldn't be
 /// opened.
-pub fn stderr() -> Option<Box<StdTerminal>> {
-    TerminfoTerminal::new(std::old_io::stderr()).map(|t| {
-        Box::new(t) as Box<StdTerminal>
-    }).or_else(|| WinConsole::new(std::old_io::stderr()).map(|t| {
-        Box::new(t) as Box<StdTerminal>
+pub fn stderr() -> Option<Box<StderrTerminal>> {
+    TerminfoTerminal::new(io::stderr()).map(|t| {
+        Box::new(t) as Box<StderrTerminal>
+    }).or_else(|| WinConsole::new(io::stderr()).map(|t| {
+        Box::new(t) as Box<StderrTerminal>
     }))
 }
 
@@ -157,7 +160,7 @@ pub enum Attr {
 
 /// A terminal with similar capabilities to an ANSI Terminal
 /// (foreground/background colors etc).
-pub trait Terminal<T: Writer>: Writer {
+pub trait Terminal<T: Write>: Write {
     /// Sets the foreground color to the given color.
     ///
     /// If the color is a bright color, but the terminal only supports 8 colors,
@@ -165,7 +168,7 @@ pub trait Terminal<T: Writer>: Writer {
     ///
     /// Returns `Ok(true)` if the color was set, `Ok(false)` otherwise, and `Err(e)`
     /// if there was an I/O error.
-    fn fg(&mut self, color: color::Color) -> IoResult<bool>;
+    fn fg(&mut self, color: color::Color) -> io::Result<bool>;
 
     /// Sets the background color to the given color.
     ///
@@ -174,12 +177,12 @@ pub trait Terminal<T: Writer>: Writer {
     ///
     /// Returns `Ok(true)` if the color was set, `Ok(false)` otherwise, and `Err(e)`
     /// if there was an I/O error.
-    fn bg(&mut self, color: color::Color) -> IoResult<bool>;
+    fn bg(&mut self, color: color::Color) -> io::Result<bool>;
 
     /// Sets the given terminal attribute, if supported.  Returns `Ok(true)`
     /// if the attribute was supported, `Ok(false)` otherwise, and `Err(e)` if
     /// there was an I/O error.
-    fn attr(&mut self, attr: Attr) -> IoResult<bool>;
+    fn attr(&mut self, attr: Attr) -> io::Result<bool>;
 
     /// Returns whether the given terminal attribute is supported.
     fn supports_attr(&self, attr: Attr) -> bool;
@@ -188,7 +191,7 @@ pub trait Terminal<T: Writer>: Writer {
     ///
     /// Returns `Ok(true)` if the terminal was reset, `Ok(false)` otherwise, and `Err(e)` if there
     /// was an I/O error.
-    fn reset(&mut self) -> IoResult<bool>;
+    fn reset(&mut self) -> io::Result<bool>;
 
     /// Gets an immutable reference to the stream inside
     fn get_ref<'a>(&'a self) -> &'a T;
@@ -198,7 +201,7 @@ pub trait Terminal<T: Writer>: Writer {
 }
 
 /// A terminal which can be unwrapped.
-pub trait UnwrappableTerminal<T: Writer>: Terminal<T> {
+pub trait UnwrappableTerminal<T: Write>: Terminal<T> {
     /// Returns the contained stream, destroying the `Terminal`
     fn unwrap(self) -> T;
 }
