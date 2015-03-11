@@ -158,17 +158,17 @@ pub static stringnames: &'static[&'static str] = &[ "cbt", "_", "cr", "csr", "tb
     "OTG3", "OTG1", "OTG4", "OTGR", "OTGL", "OTGU", "OTGD", "OTGH", "OTGV", "OTGC", "meml", "memu",
     "box1"];
 
-fn read_harder<R: io::Read>(reader: &mut R, buffer: &mut [u8]) -> io::Result<usize> {
-        let mut offset = 0;
-        while offset < buffer.len() {
-            match reader.read(&mut buffer[offset..]) {
-                Ok(0) => break,
-                Ok(n) => offset += n,
-                Err(ref e) if e.kind() == io::ErrorKind::Interrupted => (),
-                Err(e) => return Err(e),
-            }
+fn read_all<R: io::Read>(reader: &mut R, bytes: usize) -> io::Result<Vec<u8>> {
+    let mut buffer = vec![0; bytes];
+    let mut offset = 0;
+    while offset < buffer.len() {
+        match reader.read(&mut buffer[offset..]) {
+            Ok(0) => return Err(io::Error::new(io::ErrorKind::Other, "Unexpected EOF", None)),
+            Ok(n) => offset += n,
+            Err(e) => return Err(e),
         }
-        Ok(offset)
+    }
+    Ok(buffer)
 }
 
 /// Parse a compiled terminfo entry, using long capability names if `longnames` is true
@@ -234,10 +234,7 @@ pub fn parse(mut file: &mut io::Read, longnames: bool)
     }
 
     // don't read NUL
-    let mut bytes = vec![0u8; names_bytes - 1];
-    if try!(read_harder(&mut file, &mut bytes)) != names_bytes - 1 {
-        return Err("error: hit EOF before end of names table".to_string());
-    }
+    let bytes = try!(read_all(&mut file, names_bytes-1));
     let names_str = match String::from_utf8(bytes) {
         Ok(s)  => s,
         Err(_) => return Err("input not utf-8".to_string()),
@@ -275,10 +272,7 @@ pub fn parse(mut file: &mut io::Read, longnames: bool)
             file.read_u16::<LittleEndian>()
         }).collect());
 
-        let mut string_table = vec![0u8; string_table_bytes];
-        if try!(read_harder(&mut file, &mut string_table)) != string_table_bytes {
-            return Err("error: hit EOF before end of string table".to_string());
-        }
+        let string_table = try!(read_all(&mut file, string_table_bytes));
 
         try!(string_offsets.into_iter().enumerate().filter(|&(_, offset)| {
             // non-entry
