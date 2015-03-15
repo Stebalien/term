@@ -15,7 +15,10 @@
 extern crate "kernel32-sys" as kernel32;
 extern crate winapi;
 
-use std::io::{self, Write};
+// Prelude
+use std::io::prelude::*;
+
+use std::io;
 
 use Attr;
 use color;

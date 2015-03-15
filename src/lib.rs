@@ -20,7 +20,7 @@
 //!
 //! ```no_run
 //! extern crate term;
-//! use std::io::Write;
+//! use std::io::prelude::*;
 //!
 //! fn main() {
 //!     let mut t = term::stdout().unwrap();
@@ -48,11 +48,14 @@
 
 extern crate byteorder;
 
+// prelude
+use std::io::prelude::*;
+
 pub use terminfo::TerminfoTerminal;
 #[cfg(windows)]
 pub use win::WinConsole;
 
-use std::io::{self, Stdout, Stderr, Write};
+use std::io::{self, Stdout, Stderr};
 
 pub mod terminfo;
 

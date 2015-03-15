@@ -10,12 +10,15 @@
 
 //! Terminfo database interface.
 
+// Prelude
+use std::io::prelude::*;
+use std::path::Path;
+
 use std::collections::HashMap;
 use std::error::Error as ErrorTrait;
 use std::{fmt, env};
-use std::io::{self, Write};
+use std::io;
 use std::fs::File;
-use std::path::Path;
 
 use Attr;
 use color;

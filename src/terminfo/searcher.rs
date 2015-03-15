@@ -12,7 +12,9 @@
 //!
 //! Does not support hashed database, only filesystem!
 
-use std::fs::PathExt;
+// Prelude
+use std::io::prelude::*;
+
 use std::env;
 use std::path::PathBuf;
 
