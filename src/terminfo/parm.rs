@@ -15,7 +15,7 @@ use self::States::*;
 use self::FormatState::*;
 use self::FormatOp::*;
 
-use std::ascii::OwnedAsciiExt;
+use std::ascii::AsciiExt;
 use std::iter::repeat;
 use std::mem::replace;
 use std::num::Int;
@@ -259,7 +259,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables)
                         let flags = Flags::new();
                         let res = format(stack.pop().unwrap(), FormatOp::from_char(cur), flags);
                         if res.is_err() { return res }
-                        output.push_all(res.unwrap().as_slice())
+                        output.extend(res.unwrap().iter().map(|x| *x))
                     } else { return Err("stack is empty".to_string()) },
                     ':'|'#'|' '|'.'|'0'...'9' => {
                         let mut flags = Flags::new();
@@ -360,7 +360,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables)
                     (_,'d')|(_,'o')|(_,'x')|(_,'X')|(_,'s') => if stack.len() > 0 {
                         let res = format(stack.pop().unwrap(), FormatOp::from_char(cur), *flags);
                         if res.is_err() { return res }
-                        output.push_all(res.unwrap().as_slice());
+                        output.extend(res.unwrap().iter().map(|x| *x));
                         // will cause state to go to Nothing
                         old_state = FormatPattern(*flags, *fstate);
                     } else { return Err("stack is empty".to_string()) },
@@ -536,7 +536,7 @@ fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8> ,String> {
                     }
                 }
                 FormatHEX => {
-                    s = s.into_ascii_uppercase();
+                    s = s.to_ascii_uppercase();
                     if flags.alternate {
                         let s_ = replace(&mut s, vec!(b'0', b'X'));
                         s.extend(s_.into_iter());
@@ -614,7 +614,7 @@ mod test {
         {
             let mut u8v: Vec<_> = fmt.bytes().collect();
             u8v.extend(cap.as_bytes().iter().map(|&b| b));
-            expand(u8v.as_slice(), params, vars)
+            expand(&u8v, params, vars)
         }
 
         let caps = ["%d", "%c", "%s", "%Pa", "%l", "%!", "%~"];

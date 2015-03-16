@@ -242,8 +242,8 @@ impl<T: Write+Send> TerminfoTerminal<T> {
 
     fn apply_cap(&mut self, cmd: &str, params: &[Param]) -> io::Result<bool> {
         if let Some(cmd) = self.ti.strings.get(cmd) {
-            if let Ok(s) = expand(cmd.as_slice(), params, &mut Variables::new()) {
-                try!(self.out.write_all(s.as_slice()));
+            if let Ok(s) = expand(&cmd, params, &mut Variables::new()) {
+                try!(self.out.write_all(&s));
                 return Ok(true)
             }
         }

@@ -23,7 +23,7 @@ pub fn get_dbpath_for_term(term: &str) -> Option<PathBuf> {
     }
 
     let mut dirs_to_search = Vec::new();
-    let first_char = term.char_at(0);
+    let first_char = term.chars().next().unwrap();
 
     // Find search directory
     match env::var_os("TERMINFO") {
