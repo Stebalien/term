@@ -43,12 +43,9 @@
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/nightly/",
        html_playground_url = "http://play.rust-lang.org/")]
-#![feature(collections, core, unicode, std_misc, io, path_ext)]
+#![feature(collections, core, std_misc, io, path_ext)]
 #![deny(missing_docs)]
 
-extern crate byteorder;
-
-// prelude
 use std::io::prelude::*;
 
 pub use terminfo::TerminfoTerminal;

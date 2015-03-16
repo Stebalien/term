@@ -12,10 +12,8 @@
 //!
 //! Does not support hashed database, only filesystem!
 
-// Prelude
-use std::io::prelude::*;
-
 use std::env;
+use std::io::prelude::*;
 use std::path::PathBuf;
 
 /// Return path to database entry for `term`

@@ -15,9 +15,7 @@
 extern crate "kernel32-sys" as kernel32;
 extern crate winapi;
 
-// Prelude
 use std::io::prelude::*;
-
 use std::io;
 
 use Attr;
