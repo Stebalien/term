@@ -11,9 +11,9 @@
 //! Terminal formatting library.
 //!
 //! This crate provides the `Terminal` trait, which abstracts over an [ANSI
-//! Terminal][ansi] to provide color printing, among other things. There are two implementations,
-//! the `TerminfoTerminal`, which uses control characters from a
-//! [terminfo][ti] database, and `WinConsole`, which uses the [Win32 Console
+//! Terminal][ansi] to provide color printing, among other things. There are two
+//! implementations, the `TerminfoTerminal`, which uses control characters from
+//! a [terminfo][ti] database, and `WinConsole`, which uses the [Win32 Console
 //! API][win].
 //!
 //! # Examples
@@ -43,7 +43,7 @@
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/nightly/",
        html_playground_url = "http://play.rust-lang.org/")]
-#![feature(core, io, path_ext)]
+#![feature(core, io)]
 #![deny(missing_docs)]
 
 use std::io::prelude::*;

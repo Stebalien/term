@@ -13,7 +13,7 @@
 //! Does not support hashed database, only filesystem!
 
 use std::env;
-use std::io::prelude::*;
+use std::fs;
 use std::path::PathBuf;
 
 /// Return path to database entry for `term`
@@ -57,19 +57,20 @@ pub fn get_dbpath_for_term(term: &str) -> Option<PathBuf> {
 
     // Look for the terminal in all of the search directories
     for mut p in dirs_to_search {
-        if p.exists() {
+        if fs::metadata(&p).is_ok() {
             p.push(&first_char.to_string());
             p.push(&term);
-            if p.exists() {
+            if fs::metadata(&p).is_ok() {
                 return Some(p);
             }
             p.pop();
             p.pop();
 
-            // on some installations the dir is named after the hex of the char (e.g. OS X)
+            // on some installations the dir is named after the hex of the char
+            // (e.g. OS X)
             p.push(&format!("{:x}", first_char as usize));
             p.push(term);
-            if p.exists() {
+            if fs::metadata(&p).is_ok() {
                 return Some(p);
             }
         }
