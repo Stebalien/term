@@ -94,7 +94,7 @@ impl TermInfo {
     /// Create a TermInfo for the named terminal.
     pub fn from_name(name: &str) -> Result<TermInfo, Error> {
         get_dbpath_for_term(name).ok_or_else(|| {
-            Error::IoError(io::Error::new(io::ErrorKind::FileNotFound, "terminfo file not found", None))
+            Error::IoError(io::Error::new(io::ErrorKind::NotFound, "terminfo file not found", None))
         }).and_then(|p| {
             TermInfo::from_path(&p)
         })
