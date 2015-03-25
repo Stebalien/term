@@ -12,7 +12,7 @@
 
 use std::collections::HashMap;
 use std::env;
-use std::error::Error as ErrorTrait;
+use std::error;
 use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
@@ -42,6 +42,7 @@ pub struct TermInfo {
 }
 
 /// A terminfo creation error.
+#[derive(Debug)]
 pub enum Error {
     /// TermUnset Indicates that the environment doesn't include enough information to find
     /// the terminfo entry.
@@ -52,10 +53,10 @@ pub enum Error {
     IoError(io::Error),
 }
 
-impl ErrorTrait for Error {
+impl error::Error for Error {
     fn description(&self) -> &str { "failed to create TermInfo" }
 
-    fn cause(&self) -> Option<&ErrorTrait> {
+    fn cause(&self) -> Option<&error::Error> {
         use self::Error::*;
         match self {
             &IoError(ref e) => Some(e),
