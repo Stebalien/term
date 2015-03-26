@@ -12,7 +12,7 @@
 
 // FIXME (#13400): this is only a tiny fraction of the Windows console api
 
-extern crate "kernel32-sys" as kernel32;
+extern crate kernel32_sys as kernel32;
 extern crate winapi;
 
 use std::io::prelude::*;
