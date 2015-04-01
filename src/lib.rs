@@ -43,7 +43,7 @@
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/nightly/",
        html_playground_url = "http://play.rust-lang.org/")]
-#![feature(core, io, convert)]
+#![feature(io, convert)]
 #![deny(missing_docs)]
 
 use std::io::prelude::*;

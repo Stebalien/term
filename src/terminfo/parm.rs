@@ -18,7 +18,6 @@ use self::FormatOp::*;
 use std::ascii::AsciiExt;
 use std::iter::repeat;
 use std::mem::replace;
-use std::num::Int;
 
 #[derive(Copy, PartialEq)]
 enum States {
