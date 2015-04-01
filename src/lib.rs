@@ -45,6 +45,7 @@
        html_playground_url = "http://play.rust-lang.org/")]
 #![feature(io, convert)]
 #![deny(missing_docs)]
+#![cfg_attr(test, deny(warnings))]
 
 use std::io::prelude::*;
 
