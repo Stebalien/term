@@ -27,7 +27,7 @@ pub fn get_dbpath_for_term(term: &str) -> Option<PathBuf> {
 
     // Find search directory
     match env::var_os("TERMINFO") {
-        Some(dir) => dirs_to_search.push(PathBuf::from(&dir)),
+        Some(dir) => dirs_to_search.push(PathBuf::from(dir)),
         None => {
             if let Some(mut homedir) = env::home_dir() {
                 // ncurses compatibility;
