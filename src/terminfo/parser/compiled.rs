@@ -163,8 +163,7 @@ fn read_le_u16(r: &mut io::Read) -> io::Result<u16> {
     let mut amt = 0;
     while amt < b.len() {
         match try!(r.read(&mut b[amt..])) {
-            0 => return Err(io::Error::new(io::ErrorKind::Other, "end of file",
-                                           None)),
+            0 => return Err(io::Error::new(io::ErrorKind::Other, "end of file")),
             n => amt += n,
         }
     }
@@ -174,7 +173,7 @@ fn read_le_u16(r: &mut io::Read) -> io::Result<u16> {
 fn read_byte(r: &mut io::Read) -> io::Result<u8> {
     match r.bytes().next() {
         Some(s) => s,
-        None => Err(io::Error::new(io::ErrorKind::Other, "end of file", None))
+        None => Err(io::Error::new(io::ErrorKind::Other, "end of file"))
     }
 }
 

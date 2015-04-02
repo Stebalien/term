@@ -43,7 +43,6 @@
        html_favicon_url = "http://www.rust-lang.org/favicon.ico",
        html_root_url = "http://doc.rust-lang.org/nightly/",
        html_playground_url = "http://play.rust-lang.org/")]
-#![feature(io, convert)]
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
 
