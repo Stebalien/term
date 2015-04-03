@@ -134,7 +134,7 @@ pub mod color {
 /// Most attributes can only be turned on and must be turned off with term.reset().
 /// The ones that can be turned off explicitly take a boolean value.
 /// Color is also represented as an attribute for convenience.
-#[derive(Debug, PartialEq, Eq, Copy)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Attr {
     /// Bold (or possibly bright) mode
     Bold,

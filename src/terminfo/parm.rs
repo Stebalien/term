@@ -19,7 +19,7 @@ use std::ascii::AsciiExt;
 use std::iter::repeat;
 use std::mem::replace;
 
-#[derive(Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 enum States {
     Nothing,
     Percent,
@@ -36,7 +36,7 @@ enum States {
     SeekIfEndPercent(usize)
 }
 
-#[derive(Copy, PartialEq)]
+#[derive(Copy, PartialEq, Clone)]
 enum FormatState {
     FormatStateFlags,
     FormatStateWidth,
@@ -448,7 +448,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables)
     Ok(output)
 }
 
-#[derive(Copy, PartialEq)]
+#[derive(Copy, PartialEq, Clone)]
 struct Flags {
     width: usize,
     precision: usize,
@@ -465,7 +465,7 @@ impl Flags {
     }
 }
 
-#[derive(Copy)]
+#[derive(Copy, Clone)]
 enum FormatOp {
     FormatDigit,
     FormatOctal,
