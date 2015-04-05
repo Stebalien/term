@@ -86,7 +86,7 @@ impl<T: Write+Send> WinConsole<T> {
             // terminal! Admittedly, this is fragile, since stderr could be
             // redirected to a different console. This is good enough for
             // rustc though. See #13400.
-            let out = kernel32::GetStdHandle(-11);
+            let out = kernel32::GetStdHandle(-11i32 as winapi::DWORD);
             kernel32::SetConsoleTextAttribute(out, accum);
         }
     }
@@ -98,7 +98,7 @@ impl<T: Write+Send> WinConsole<T> {
         let bg;
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
-            let out = kernel32::GetStdHandle(-11);
+            let out = kernel32::GetStdHandle(-11i32 as winapi::DWORD);
             if kernel32::GetConsoleScreenBufferInfo(out, &mut buffer_info) != 0 {
                 fg = bits_to_color(buffer_info.wAttributes);
                 bg = bits_to_color(buffer_info.wAttributes >> 4);
