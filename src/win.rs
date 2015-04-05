@@ -77,7 +77,7 @@ impl<T: Write+Send> WinConsole<T> {
         accum |= color_to_bits(self.background) << 4;
 
         unsafe {
-            // Magic -11 means stdout, from
+            // Magic -11 (!10) means stdout, from
             // http://msdn.microsoft.com/en-us/library/windows/desktop/ms683231%28v=vs.85%29.aspx
             //
             // You may be wondering, "but what about stderr?", and the answer
@@ -86,7 +86,7 @@ impl<T: Write+Send> WinConsole<T> {
             // terminal! Admittedly, this is fragile, since stderr could be
             // redirected to a different console. This is good enough for
             // rustc though. See #13400.
-            let out = kernel32::GetStdHandle(-11);
+            let out = kernel32::GetStdHandle(!10);
             kernel32::SetConsoleTextAttribute(out, accum);
         }
     }
@@ -98,7 +98,7 @@ impl<T: Write+Send> WinConsole<T> {
         let bg;
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
-            let out = kernel32::GetStdHandle(-11);
+            let out = kernel32::GetStdHandle(!10);
             if kernel32::GetConsoleScreenBufferInfo(out, &mut buffer_info) != 0 {
                 fg = bits_to_color(buffer_info.wAttributes);
                 bg = bits_to_color(buffer_info.wAttributes >> 4);
