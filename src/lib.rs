@@ -193,6 +193,18 @@ pub trait Terminal<T: Write>: Write {
     /// was an I/O error.
     fn reset(&mut self) -> io::Result<bool>;
 
+    /// Moves the cursor up one line.
+    ///
+    /// Returns `Ok(true)` if the cursor was moved, `Ok(false)` otherwise, and `Err(e)`
+    /// if there was an I/O error.
+    fn cursor_up(&mut self) -> io::Result<bool>;
+
+    /// Deletes the text from the cursor location to the end of the line.
+    ///
+    /// Returns `Ok(true)` if the text was deleted, `Ok(false)` otherwise, and `Err(e)`
+    /// if there was an I/O error.
+    fn delete_line(&mut self) -> io::Result<bool>;
+
     /// Gets an immutable reference to the stream inside
     fn get_ref<'a>(&'a self) -> &'a T;
 
