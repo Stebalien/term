@@ -205,6 +205,12 @@ pub trait Terminal<T: Write>: Write {
     /// if there was an I/O error.
     fn delete_line(&mut self) -> io::Result<bool>;
 
+    /// Moves the cursor to the left edge of the current line.
+    ///
+    /// Returns `Ok(true)` if the text was deleted, `Ok(false)` otherwise, and `Err(e)`
+    /// if there was an I/O error.
+    fn carriage_return(&mut self) -> io::Result<bool>;
+
     /// Gets an immutable reference to the stream inside
     fn get_ref<'a>(&'a self) -> &'a T;
 

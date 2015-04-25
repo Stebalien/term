@@ -213,6 +213,10 @@ impl<T: Write+Send> Terminal<T> for TerminfoTerminal<T> {
         self.apply_cap("dl", &[])
     }
 
+    fn carriage_return(&mut self) -> io::Result<bool> {
+        self.apply_cap("cr", &[])
+    }
+
     fn get_ref<'a>(&'a self) -> &'a T { &self.out }
 
     fn get_mut<'a>(&'a mut self) -> &'a mut T { &mut self.out }
