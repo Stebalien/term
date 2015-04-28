@@ -1,4 +1,4 @@
-// Copyright 2013-2014 The Rust Project Developers. See the COPYRIGHT
+// Copyright 2013-2015 The Rust Project Developers. See the COPYRIGHT
 // file at the top-level directory of this distribution and at
 // http://rust-lang.org/COPYRIGHT.
 //
@@ -79,7 +79,7 @@ pub fn stdout() -> Option<Box<StdoutTerminal>> {
 pub fn stdout() -> Option<Box<StdoutTerminal>> {
     TerminfoTerminal::new(io::stdout()).map(|t| {
         Box::new(t) as Box<StdoutTerminal>
-    }).or_else(|| WinConsole::new(io::stdout()).map(|t| {
+    }).or_else(|| WinConsole::new(io::stdout()).ok().map(|t| {
         Box::new(t) as Box<StdoutTerminal>
     }))
 }
@@ -99,7 +99,7 @@ pub fn stderr() -> Option<Box<StderrTerminal>> {
 pub fn stderr() -> Option<Box<StderrTerminal>> {
     TerminfoTerminal::new(io::stderr()).map(|t| {
         Box::new(t) as Box<StderrTerminal>
-    }).or_else(|| WinConsole::new(io::stderr()).map(|t| {
+    }).or_else(|| WinConsole::new(io::stderr()).ok().map(|t| {
         Box::new(t) as Box<StderrTerminal>
     }))
 }
