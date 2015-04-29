@@ -205,6 +205,18 @@ impl<T: Write+Send> Terminal<T> for TerminfoTerminal<T> {
         self.out.write_all(&cmd).map(|_|true)
     }
 
+    fn cursor_up(&mut self) -> io::Result<bool> {
+        self.apply_cap("cuu1", &[])
+    }
+
+    fn delete_line(&mut self) -> io::Result<bool> {
+        self.apply_cap("dl", &[])
+    }
+
+    fn carriage_return(&mut self) -> io::Result<bool> {
+        self.apply_cap("cr", &[])
+    }
+
     fn get_ref<'a>(&'a self) -> &'a T { &self.out }
 
     fn get_mut<'a>(&'a mut self) -> &'a mut T { &mut self.out }

@@ -1,4 +1,4 @@
-// Copyright 2013-2014 The Rust Project Developers. See the COPYRIGHT
+// Copyright 2013-2015 The Rust Project Developers. See the COPYRIGHT
 // file at the top-level directory of this distribution and at
 // http://rust-lang.org/COPYRIGHT.
 //
@@ -79,7 +79,7 @@ pub fn stdout() -> Option<Box<StdoutTerminal>> {
 pub fn stdout() -> Option<Box<StdoutTerminal>> {
     TerminfoTerminal::new(io::stdout()).map(|t| {
         Box::new(t) as Box<StdoutTerminal>
-    }).or_else(|| WinConsole::new(io::stdout()).map(|t| {
+    }).or_else(|| WinConsole::new(io::stdout()).ok().map(|t| {
         Box::new(t) as Box<StdoutTerminal>
     }))
 }
@@ -99,7 +99,7 @@ pub fn stderr() -> Option<Box<StderrTerminal>> {
 pub fn stderr() -> Option<Box<StderrTerminal>> {
     TerminfoTerminal::new(io::stderr()).map(|t| {
         Box::new(t) as Box<StderrTerminal>
-    }).or_else(|| WinConsole::new(io::stderr()).map(|t| {
+    }).or_else(|| WinConsole::new(io::stderr()).ok().map(|t| {
         Box::new(t) as Box<StderrTerminal>
     }))
 }
@@ -192,6 +192,24 @@ pub trait Terminal<T: Write>: Write {
     /// Returns `Ok(true)` if the terminal was reset, `Ok(false)` otherwise, and `Err(e)` if there
     /// was an I/O error.
     fn reset(&mut self) -> io::Result<bool>;
+
+    /// Moves the cursor up one line.
+    ///
+    /// Returns `Ok(true)` if the cursor was moved, `Ok(false)` otherwise, and `Err(e)`
+    /// if there was an I/O error.
+    fn cursor_up(&mut self) -> io::Result<bool>;
+
+    /// Deletes the text from the cursor location to the end of the line.
+    ///
+    /// Returns `Ok(true)` if the text was deleted, `Ok(false)` otherwise, and `Err(e)`
+    /// if there was an I/O error.
+    fn delete_line(&mut self) -> io::Result<bool>;
+
+    /// Moves the cursor to the left edge of the current line.
+    ///
+    /// Returns `Ok(true)` if the text was deleted, `Ok(false)` otherwise, and `Err(e)`
+    /// if there was an I/O error.
+    fn carriage_return(&mut self) -> io::Result<bool>;
 
     /// Gets an immutable reference to the stream inside
     fn get_ref<'a>(&'a self) -> &'a T;
