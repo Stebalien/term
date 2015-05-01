@@ -150,7 +150,8 @@ pub struct TerminfoTerminal<T> {
     ti: TermInfo,
 }
 
-impl<T: Write+Send> Terminal<T> for TerminfoTerminal<T> {
+impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
+    type Output = T;
     fn fg(&mut self, color: color::Color) -> io::Result<bool> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
@@ -222,7 +223,7 @@ impl<T: Write+Send> Terminal<T> for TerminfoTerminal<T> {
     fn get_mut<'a>(&'a mut self) -> &'a mut T { &mut self.out }
 }
 
-impl<T: Write+Send> UnwrappableTerminal<T> for TerminfoTerminal<T> {
+impl<T: Write+Send> UnwrappableTerminal for TerminfoTerminal<T> {
     fn unwrap(self) -> T { self.out }
 }
 

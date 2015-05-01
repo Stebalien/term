@@ -148,7 +148,9 @@ impl<T: Write> Write for WinConsole<T> {
     }
 }
 
-impl<T: Write+Send> Terminal<T> for WinConsole<T> {
+impl<T: Write+Send> Terminal for WinConsole<T> {
+    type Output = T;
+
     fn fg(&mut self, color: color::Color) -> io::Result<bool> {
         self.foreground = color;
         try!(self.apply());
@@ -269,6 +271,6 @@ impl<T: Write+Send> Terminal<T> for WinConsole<T> {
     fn get_mut<'a>(&'a mut self) -> &'a mut T { &mut self.buf }
 }
 
-impl<T: Write+Send> UnwrappableTerminal<T> for WinConsole<T> {
+impl<T: Write+Send> UnwrappableTerminal for WinConsole<T> {
     fn unwrap(self) -> T { self.buf }
 }
