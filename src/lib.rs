@@ -47,6 +47,7 @@
 #![cfg_attr(test, deny(warnings))]
 
 use std::io::prelude::*;
+use std::ops::DerefMut;
 
 pub use terminfo::TerminfoTerminal;
 #[cfg(windows)]
@@ -60,9 +61,9 @@ pub mod terminfo;
 mod win;
 
 /// Alias for stderr terminals.
-pub type StdoutTerminal = Terminal<Stdout> + Send;
+pub type StdoutTerminal = Terminal<Target=Stdout> + Send;
 /// Alias for stderr terminals.
-pub type StderrTerminal = Terminal<Stderr> + Send;
+pub type StderrTerminal = Terminal<Target=Stderr> + Send;
 
 #[cfg(not(windows))]
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
@@ -160,7 +161,7 @@ pub enum Attr {
 
 /// A terminal with similar capabilities to an ANSI Terminal
 /// (foreground/background colors etc).
-pub trait Terminal<T: Write>: Write {
+pub trait Terminal: Write + DerefMut {
     /// Sets the foreground color to the given color.
     ///
     /// If the color is a bright color, but the terminal only supports 8 colors,
@@ -210,16 +211,10 @@ pub trait Terminal<T: Write>: Write {
     /// Returns `Ok(true)` if the text was deleted, `Ok(false)` otherwise, and `Err(e)`
     /// if there was an I/O error.
     fn carriage_return(&mut self) -> io::Result<bool>;
-
-    /// Gets an immutable reference to the stream inside
-    fn get_ref<'a>(&'a self) -> &'a T;
-
-    /// Gets a mutable reference to the stream inside
-    fn get_mut<'a>(&'a mut self) -> &'a mut T;
 }
 
 /// A terminal which can be unwrapped.
-pub trait UnwrappableTerminal<T: Write>: Terminal<T> {
+pub trait UnwrappableTerminal: Terminal {
     /// Returns the contained stream, destroying the `Terminal`
-    fn unwrap(self) -> T;
+    fn unwrap(self) -> Self::Target;
 }

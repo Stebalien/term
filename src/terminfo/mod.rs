@@ -17,6 +17,7 @@ use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io;
+use std::ops::{Deref, DerefMut};
 use std::path::Path;
 
 use Attr;
@@ -150,7 +151,7 @@ pub struct TerminfoTerminal<T> {
     ti: TermInfo,
 }
 
-impl<T: Write+Send> Terminal<T> for TerminfoTerminal<T> {
+impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
     fn fg(&mut self, color: color::Color) -> io::Result<bool> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
@@ -216,13 +217,22 @@ impl<T: Write+Send> Terminal<T> for TerminfoTerminal<T> {
     fn carriage_return(&mut self) -> io::Result<bool> {
         self.apply_cap("cr", &[])
     }
-
-    fn get_ref<'a>(&'a self) -> &'a T { &self.out }
-
-    fn get_mut<'a>(&'a mut self) -> &'a mut T { &mut self.out }
 }
 
-impl<T: Write+Send> UnwrappableTerminal<T> for TerminfoTerminal<T> {
+impl<T> Deref for TerminfoTerminal<T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        &self.out
+    }
+}
+
+impl<T> DerefMut for TerminfoTerminal<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.out
+    }
+}
+
+impl<T: Write+Send> UnwrappableTerminal for TerminfoTerminal<T> {
     fn unwrap(self) -> T { self.out }
 }
 
