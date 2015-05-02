@@ -221,5 +221,5 @@ pub trait Terminal: Write {
     fn get_mut<'a>(&'a mut self) -> &'a mut Self::Output;
 
     /// Returns the contained stream, destroying the `Terminal`
-    fn unwrap(self) -> Self::Output where Self: Sized;
+    fn into_inner(self) -> Self::Output where Self: Sized;
 }

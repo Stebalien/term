@@ -221,7 +221,7 @@ impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
 
     fn get_mut<'a>(&'a mut self) -> &'a mut T { &mut self.out }
 
-    fn unwrap(self) -> T where Self: Sized { self.out }
+    fn into_inner(self) -> T where Self: Sized { self.out }
 }
 
 impl<T: Write+Send> TerminfoTerminal<T> {

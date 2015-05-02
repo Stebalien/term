@@ -270,5 +270,5 @@ impl<T: Write+Send> Terminal for WinConsole<T> {
 
     fn get_mut<'a>(&'a mut self) -> &'a mut T { &mut self.buf }
 
-    fn unwrap(self) -> T where Self: Sized { self.buf }
+    fn into_inner(self) -> T where Self: Sized { self.buf }
 }
