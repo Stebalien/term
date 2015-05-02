@@ -60,9 +60,9 @@ pub mod terminfo;
 mod win;
 
 /// Alias for stderr terminals.
-pub type StdoutTerminal = Terminal<Stdout> + Send;
+pub type StdoutTerminal = Terminal<Output=Stdout> + Send;
 /// Alias for stderr terminals.
-pub type StderrTerminal = Terminal<Stderr> + Send;
+pub type StderrTerminal = Terminal<Output=Stderr> + Send;
 
 #[cfg(not(windows))]
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
@@ -160,7 +160,10 @@ pub enum Attr {
 
 /// A terminal with similar capabilities to an ANSI Terminal
 /// (foreground/background colors etc).
-pub trait Terminal<T: Write>: Write {
+pub trait Terminal: Write {
+    /// The terminal's output writer type.
+    type Output: Write;
+
     /// Sets the foreground color to the given color.
     ///
     /// If the color is a bright color, but the terminal only supports 8 colors,
@@ -212,14 +215,14 @@ pub trait Terminal<T: Write>: Write {
     fn carriage_return(&mut self) -> io::Result<bool>;
 
     /// Gets an immutable reference to the stream inside
-    fn get_ref<'a>(&'a self) -> &'a T;
+    fn get_ref<'a>(&'a self) -> &'a Self::Output;
 
     /// Gets a mutable reference to the stream inside
-    fn get_mut<'a>(&'a mut self) -> &'a mut T;
+    fn get_mut<'a>(&'a mut self) -> &'a mut Self::Output;
 }
 
 /// A terminal which can be unwrapped.
-pub trait UnwrappableTerminal<T: Write>: Terminal<T> {
+pub trait UnwrappableTerminal: Terminal {
     /// Returns the contained stream, destroying the `Terminal`
-    fn unwrap(self) -> T;
+    fn unwrap(self) -> Self::Output;
 }
