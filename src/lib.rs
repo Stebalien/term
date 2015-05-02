@@ -219,10 +219,7 @@ pub trait Terminal: Write {
 
     /// Gets a mutable reference to the stream inside
     fn get_mut<'a>(&'a mut self) -> &'a mut Self::Output;
-}
 
-/// A terminal which can be unwrapped.
-pub trait UnwrappableTerminal: Terminal {
     /// Returns the contained stream, destroying the `Terminal`
-    fn unwrap(self) -> Self::Output;
+    fn unwrap(self) -> Self::Output where Self: Sized;
 }
