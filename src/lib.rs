@@ -23,12 +23,12 @@
 //!
 //! ```toml
 //! [dependencies]
-//! 
-//! term = "*"
+//!
+//! term = "0.2"
 //! ```
-//! 
+//!
 //! and this to your crate root:
-//! 
+//!
 //! ```rust
 //! extern crate term;
 //! ```
