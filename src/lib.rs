@@ -18,8 +18,8 @@
 //!
 //! # Usage
 //!
-//! This crates is [on crates.io](https://crates.io/crates/term) and can be
-//! used by adding `rand` to your dependencies in your project's `Cargo.toml`.
+//! This crate is [on crates.io](https://crates.io/crates/term) and can be
+//! used by adding `rand` to the dependencies in your project's `Cargo.toml`.
 //!
 //! ```toml
 //! [dependencies]
