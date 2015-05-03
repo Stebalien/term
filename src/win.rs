@@ -23,7 +23,7 @@ use std::ptr;
 
 use Attr;
 use color;
-use {Terminal, UnwrappableTerminal};
+use Terminal;
 
 /// A Terminal implementation which uses the Win32 Console API.
 pub struct WinConsole<T> {
@@ -269,8 +269,6 @@ impl<T: Write+Send> Terminal for WinConsole<T> {
     fn get_ref<'a>(&'a self) -> &'a T { &self.buf }
 
     fn get_mut<'a>(&'a mut self) -> &'a mut T { &mut self.buf }
-}
 
-impl<T: Write+Send> UnwrappableTerminal for WinConsole<T> {
-    fn unwrap(self) -> T { self.buf }
+    fn into_inner(self) -> T where Self: Sized { self.buf }
 }

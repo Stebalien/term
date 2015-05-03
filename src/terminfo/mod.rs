@@ -22,7 +22,6 @@ use std::path::Path;
 use Attr;
 use color;
 use Terminal;
-use UnwrappableTerminal;
 use self::searcher::get_dbpath_for_term;
 use self::parser::compiled::{parse, msys_terminfo};
 use self::parm::{expand, Variables, Param};
@@ -221,10 +220,8 @@ impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
     fn get_ref<'a>(&'a self) -> &'a T { &self.out }
 
     fn get_mut<'a>(&'a mut self) -> &'a mut T { &mut self.out }
-}
 
-impl<T: Write+Send> UnwrappableTerminal for TerminfoTerminal<T> {
-    fn unwrap(self) -> T { self.out }
+    fn into_inner(self) -> T where Self: Sized { self.out }
 }
 
 impl<T: Write+Send> TerminfoTerminal<T> {
