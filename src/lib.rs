@@ -76,7 +76,7 @@ pub mod terminfo;
 #[cfg(windows)]
 mod win;
 
-/// Alias for stderr terminals.
+/// Alias for stdout terminals.
 pub type StdoutTerminal = Terminal<Output=Stdout> + Send;
 /// Alias for stderr terminals.
 pub type StderrTerminal = Terminal<Output=Stderr> + Send;
