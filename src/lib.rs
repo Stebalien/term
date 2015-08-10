@@ -43,10 +43,10 @@
 //!     let mut t = term::stdout().unwrap();
 //!
 //!     t.fg(term::color::GREEN).unwrap();
-//!     (write!(t, "hello, ")).unwrap();
+//!     write!(t, "hello, ").unwrap();
 //!
 //!     t.fg(term::color::RED).unwrap();
-//!     (writeln!(t, "world!")).unwrap();
+//!     writeln!(t, "world!").unwrap();
 //!
 //!     assert!(t.reset().unwrap());
 //! }
