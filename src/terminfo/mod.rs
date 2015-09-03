@@ -17,6 +17,7 @@ use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io;
+use std::io::BufReader;
 use std::path::Path;
 
 use Attr;
@@ -103,12 +104,10 @@ impl TermInfo {
 
     /// Parse the given TermInfo.
     pub fn from_path(path: &Path) -> Result<TermInfo, Error> {
-        File::open(path).map_err(|e| {
-            Error::IoError(e)
-        }).and_then(|ref mut file| {
-            parse(file, false).map_err(|e| {
-                Error::MalformedTerminfo(e)
-            })
+        let file = try!(File::open(path).map_err(|e| { Error::IoError(e) }));
+        let mut reader = BufReader::new(file);
+        parse(&mut reader, false).map_err(|e| {
+            Error::MalformedTerminfo(e)
         })
     }
 }
