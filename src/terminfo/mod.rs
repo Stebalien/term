@@ -201,7 +201,9 @@ impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
             None => return Ok(false),
         };
 
-        self.out.write_all(&cmd).map(|_|true)
+        try!(self.out.write_all(&cmd));
+        try!(self.out.flush());
+        Ok(true)
     }
 
     fn cursor_up(&mut self) -> io::Result<bool> {
