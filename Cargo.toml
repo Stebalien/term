@@ -1,13 +1,13 @@
 [package]
 
 name = "term"
-version = "0.2.11"
-authors = ["The Rust Project Developers"]
+version = "0.2.12"
+authors = ["The Rust Project Developers", "Steven Allen"]
 license = "MIT/Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/rust-lang/term"
-homepage = "https://github.com/rust-lang/term"
-documentation = "https://doc.rust-lang.org/term"
+repository = "https://github.com/Stebalien/term"
+homepage = "https://github.com/Stebalien/term"
+documentation = "https://stebalien.github.io/term"
 description = """
 A terminal formatting library
 """
