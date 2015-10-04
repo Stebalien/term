@@ -7,7 +7,7 @@ license = "MIT/Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/Stebalien/term"
 homepage = "https://github.com/Stebalien/term"
-documentation = "https://stebalien.github.io/term"
+documentation = "https://stebalien.github.io/doc/term/term/"
 description = """
 A terminal formatting library
 """
