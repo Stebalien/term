@@ -213,10 +213,16 @@ pub trait Terminal: Write {
     /// Returns whether the given terminal attribute is supported.
     fn supports_attr(&self, attr: Attr) -> bool;
 
-    /// Resets all terminal attributes and color to the default.
+    /// Resets all terminal attributes and colors to their defaults.
     ///
     /// Returns `Ok(true)` if the terminal was reset, `Ok(false)` otherwise, and `Err(e)` if there
     /// was an I/O error.
+    ///
+    /// *Note: This does not flush.*
+    ///
+    /// That means the reset command may get buffered so, if you aren't planning on doing anything
+    /// else that might flush stdout's buffer (e.g. writing a line of text), you should flush after
+    /// calling reset.
     fn reset(&mut self) -> io::Result<bool>;
 
     /// Moves the cursor up one line.
