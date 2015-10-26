@@ -5,6 +5,8 @@ rust:
   - nightly
 sudo: false
 script:
+  - cargo build --verbose --no-default-features
+  - cargo test --verbose --no-default-features
   - cargo build --verbose
   - cargo test --verbose
   - cargo doc
