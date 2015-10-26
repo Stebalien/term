@@ -12,6 +12,14 @@ description = """
 A terminal formatting library
 """
 
-[dependencies]
-winapi = "0.2"
-kernel32-sys = "0.1"
+[features]
+default = ["windows"]
+windows = ["winapi", "kernel32-sys"]
+
+[dependencies.winapi]
+version = "0.2"
+optional = true
+
+[dependencies.kernel32-sys]
+version = "0.1"
+optional = true
