@@ -14,4 +14,4 @@ A terminal formatting library
 
 [dependencies]
 winapi = "0.2"
-kernel32-sys = "0.1"
+kernel32-sys = "0.2"
