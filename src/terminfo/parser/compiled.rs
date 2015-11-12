@@ -255,23 +255,25 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
                    for names section".to_string());
     }
 
-    let bools_map: HashMap<String, bool> = try!(
+    let bools_map: HashMap<String, bool> = try! {
         (0..bools_bytes).filter_map(|i| match read_byte(file) {
             Err(e) => Some(Err(e)),
             Ok(1) => Some(Ok((bnames[i].to_string(), true))),
             Ok(_) => None
-        }).collect());
+        }).collect()
+    };
 
     if (bools_bytes + names_bytes) % 2 == 1 {
         try!(read_byte(file)); // compensate for padding
     }
 
-    let numbers_map: HashMap<String, u16> = try!(
+    let numbers_map: HashMap<String, u16> = try! {
         (0..numbers_count).filter_map(|i| match read_le_u16(file) {
             Ok(0xFFFF) => None,
             Ok(n) => Some(Ok((nnames[i].to_string(), n))),
             Err(e) => Some(Err(e))
-        }).collect());
+        }).collect()
+    };
 
     let string_map: HashMap<String, Vec<u8>> = if string_offsets_count > 0 {
         let string_offsets: Vec<u16> = try!((0..string_offsets_count).map(|_| {
