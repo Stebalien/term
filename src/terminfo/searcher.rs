@@ -18,12 +18,11 @@ use std::path::PathBuf;
 
 /// Return path to database entry for `term`
 pub fn get_dbpath_for_term(term: &str) -> Option<PathBuf> {
-    if term.len() == 0 {
-        return None;
-    }
-
     let mut dirs_to_search = Vec::new();
-    let first_char = term.chars().next().unwrap();
+    let first_char = match term.chars().next() {
+        Some(c) => c,
+        None => return None
+    };
 
     // Find search directory
     match env::var_os("TERMINFO") {
