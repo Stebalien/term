@@ -15,10 +15,8 @@
 extern crate kernel32;
 extern crate winapi;
 
-use std::ffi::OsStr;
 use std::io::prelude::*;
 use std::io;
-use std::os::windows::ffi::OsStrExt;
 use std::ptr;
 
 use Attr;
@@ -74,11 +72,10 @@ fn bits_to_color(bits: u16) -> color::Color {
 
 // Just get a handle to the current console buffer whatever it is
 fn conout() -> io::Result<winapi::HANDLE> {
-    let name: &OsStr = "CONOUT$\0".as_ref();
-    let name: Vec<u16> = name.encode_wide().collect();
+    let name = b"CONOUT$\0";
     let handle = unsafe {
-        kernel32::CreateFileW(
-            name.as_ptr(),
+        kernel32::CreateFileA(
+            name.as_ptr() as *const i8,
             winapi::GENERIC_READ | winapi::GENERIC_WRITE,
             winapi::FILE_SHARE_WRITE,
             ptr::null_mut(),
