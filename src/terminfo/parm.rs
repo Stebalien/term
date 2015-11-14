@@ -15,9 +15,7 @@ use self::States::*;
 use self::FormatState::*;
 use self::FormatOp::*;
 
-use std::ascii::AsciiExt;
 use std::iter::repeat;
-use std::mem::replace;
 
 #[derive(Clone, Copy, PartialEq)]
 enum States {
@@ -423,67 +421,52 @@ impl FormatOp {
 
 fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8> ,String> {
     let mut s = match val {
-        Number(d) => {
-            let s = match (op, flags.sign) {
-                (FormatDigit, true)  => format!("{:+}", d),
-                (FormatDigit, false) => format!("{}", d),
-                (FormatOctal, _)     => format!("{:o}", d),
-                (FormatHex, _)       => format!("{:x}", d),
-                (FormatHEX, _)       => format!("{:X}", d),
-                (FormatString, _)    => return Err("non-number on stack with %s".to_string())
-            };
-
-            let mut s: Vec<u8> = s.into_bytes().into_iter().collect();
-            if flags.precision > s.len() {
-                let mut s_ = Vec::with_capacity(flags.precision);
-                let n = flags.precision - s.len();
-                s_.extend(repeat(b'0').take(n));
-                s_.extend(s.into_iter());
-                s = s_;
-            }
-            assert!(!s.is_empty(), "string conversion produced empty result");
-            match op {
-                FormatDigit => {
-                    if flags.space && !(s[0] == b'-' || s[0] == b'+' ) {
-                        s.insert(0, b' ');
-                    }
+        Number(d) => match op {
+            FormatDigit => {
+                if flags.sign {
+                    format!("{:+01$}", d, flags.precision)
+                } else if d < 0 {
+                    // C doesn't take sign into account in precision calculation.
+                    format!("{:01$}", d, flags.precision + 1)
+                } else if flags.space {
+                    format!(" {:01$}", d, flags.precision)
+                } else {
+                    format!("{:01$}", d, flags.precision)
                 }
-                FormatOctal => {
-                    if flags.alternate && s[0] != b'0' {
-                        s.insert(0, b'0');
-                    }
+            },
+            FormatOctal => {
+                if flags.alternate {
+                    // Leading octal zero counts against precision.
+                    format!("0{:01$o}", d, flags.precision.saturating_sub(1))
+                } else {
+                    format!("{:01$o}", d, flags.precision)
                 }
-                FormatHex => {
-                    if flags.alternate {
-                        let s_ = replace(&mut s, vec!(b'0', b'x'));
-                        s.extend(s_.into_iter());
-                    }
+            },
+            FormatHex => {
+                if flags.alternate && d != 0 {
+                    format!("0x{:01$x}", d, flags.precision)
+                } else {
+                    format!("{:01$x}", d, flags.precision)
                 }
-                FormatHEX => {
-                    s = s.to_ascii_uppercase();
-                    if flags.alternate {
-                        let s_ = replace(&mut s, vec!(b'0', b'X'));
-                        s.extend(s_.into_iter());
-                    }
+            },
+            FormatHEX => {
+                if flags.alternate && d != 0 {
+                    format!("0X{:01$X}", d, flags.precision)
+                } else {
+                    format!("{:01$X}", d, flags.precision)
                 }
-                FormatString => unreachable!()
-            }
-            s
-        }
-        Words(s) => {
-            match op {
-                FormatString => {
-                    let mut s = s.as_bytes().to_vec();
-                    if flags.precision > 0 && flags.precision < s.len() {
-                        s.truncate(flags.precision);
-                    }
-                    s
+            },
+            FormatString => return Err("non-number on stack with %s".to_string())
+        }.into_bytes(),
+        Words(s) => match op {
+            FormatString => {
+                let mut s = s.into_bytes();
+                if flags.precision > 0 && flags.precision < s.len() {
+                    s.truncate(flags.precision);
                 }
-                _ => {
-                    return Err(format!("non-string on stack with %{}",
-                                       op.to_char()))
-                }
-            }
+                s
+            },
+            _ => return Err(format!("non-string on stack with %{}", op.to_char()))
         }
     };
     if flags.width > s.len() {
