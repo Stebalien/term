@@ -200,12 +200,11 @@ impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
         }).next() {
             Some(op) => match expand(&op, &[], &mut Variables::new()) {
                 Ok(cmd) => cmd,
-                Err(_) => return Ok(false),
+                Err(e) => return Err(io::Error::new(io::ErrorKind::InvalidData, e))
             },
             None => return Ok(false),
         };
-
-        self.out.write_all(&cmd).map(|_|true)
+        self.out.write_all(&cmd).and(Ok(true))
     }
 
     fn cursor_up(&mut self) -> io::Result<bool> {
@@ -256,13 +255,13 @@ impl<T: Write+Send> TerminfoTerminal<T> {
     }
 
     fn apply_cap(&mut self, cmd: &str, params: &[Param]) -> io::Result<bool> {
-        if let Some(cmd) = self.ti.strings.get(cmd) {
-            if let Ok(s) = expand(&cmd, params, &mut Variables::new()) {
-                try!(self.out.write_all(&s));
-                return Ok(true)
-            }
+        match self.ti.strings.get(cmd) {
+            Some(cmd) => match expand(&cmd, params, &mut Variables::new()) {
+                Ok(s) => self.out.write_all(&s).and(Ok(true)),
+                Err(e) => Err(io::Error::new(io::ErrorKind::InvalidData, e)),
+            },
+            None => Ok(false)
         }
-        Ok(false)
     }
 }
 
