@@ -125,7 +125,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables)
                     'c' => match stack.pop() {
                         // if c is 0, use 0200 (128) for ncurses compatibility
                         Some(Number(0)) => output.push(128u8),
-                        // TODO: Check bounds?
+                        // Don't check bounds. ncurses just casts and truncates.
                         Some(Number(c)) => output.push(c as u8),
                         Some(_) => return Err("a non-char was used with %c".to_string()),
                         None => return Err("stack is empty".to_string()),
