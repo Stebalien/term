@@ -103,7 +103,11 @@ impl TermInfo {
     }
 
     /// Parse the given TermInfo.
-    pub fn from_path(path: &Path) -> Result<TermInfo, Error> {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<TermInfo, Error> {
+        Self::_from_path(path.as_ref())
+    }
+    // Keep the metadata small
+    fn _from_path(path: &Path) -> Result<TermInfo, Error> {
         let file = try!(File::open(path).map_err(|e| { Error::IoError(e) }));
         let mut reader = BufReader::new(file);
         parse(&mut reader, false).map_err(|e| {
