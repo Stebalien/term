@@ -26,7 +26,7 @@ enum States {
     PushParam,
     CharConstant,
     CharClose,
-    IntConstant(i16),
+    IntConstant(i32),
     FormatPattern(Flags, FormatState),
     SeekIfElse(usize),
     SeekIfElsePercent(usize),
@@ -46,7 +46,7 @@ enum FormatState {
 #[derive(Clone)]
 pub enum Param {
     Words(String),
-    Number(i16)
+    Number(i32)
 }
 
 /// Container for static and dynamic variable arrays
@@ -136,7 +136,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables)
                     '\'' => state = CharConstant,
                     '{' => state = IntConstant(0),
                     'l' => match stack.pop() {
-                        Some(Words(s)) => stack.push(Number(s.len() as i16)),
+                        Some(Words(s)) => stack.push(Number(s.len() as i32)),
                         Some(_) => return Err("a non-str was used with %l".to_string()),
                         None => return Err("stack is empty".to_string()) 
                     },
@@ -255,7 +255,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables)
                 }
             },
             CharConstant => {
-                stack.push(Number(c as i16));
+                stack.push(Number(c as i32));
                 state = CharClose;
             },
             CharClose => if cur != '\'' {
@@ -266,7 +266,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables)
                     stack.push(Number(i));
                     state = Nothing;
                 } else if let Some(digit) = cur.to_digit(10) {
-                    match i.checked_mul(10).and_then(|i_ten|i_ten.checked_add(digit as i16)) {
+                    match i.checked_mul(10).and_then(|i_ten|i_ten.checked_add(digit as i32)) {
                         Some(i) => {
                             state = IntConstant(i);
                             old_state = Nothing;

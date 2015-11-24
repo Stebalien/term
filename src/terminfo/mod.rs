@@ -153,7 +153,7 @@ impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
     fn fg(&mut self, color: color::Color) -> io::Result<bool> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
-            return self.apply_cap("setaf", &[Param::Number(color as i16)]);
+            return self.apply_cap("setaf", &[Param::Number(color as i32)]);
         }
         Ok(false)
     }
@@ -161,7 +161,7 @@ impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
     fn bg(&mut self, color: color::Color) -> io::Result<bool> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
-            return self.apply_cap("setab", &[Param::Number(color as i16)]);
+            return self.apply_cap("setab", &[Param::Number(color as i32)]);
         }
         Ok(false)
     }
