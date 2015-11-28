@@ -20,8 +20,10 @@ use std::io;
 use std::ptr;
 
 use Attr;
-use color;
+use Error;
+use Result;
 use Terminal;
+use color;
 
 /// A Terminal implementation which uses the Win32 Console API.
 pub struct WinConsole<T> {
@@ -110,7 +112,7 @@ impl<T: Write+Send> WinConsole<T> {
         Ok(())
     }
 
-    /// Returns `None` whenever the terminal cannot be created for some
+    /// Returns `Err` whenever the terminal cannot be created for some
     /// reason.
     pub fn new(out: T) -> io::Result<WinConsole<T>> {
         let fg;
@@ -148,33 +150,33 @@ impl<T: Write> Write for WinConsole<T> {
 impl<T: Write+Send> Terminal for WinConsole<T> {
     type Output = T;
 
-    fn fg(&mut self, color: color::Color) -> io::Result<bool> {
+    fn fg(&mut self, color: color::Color) -> Result<()> {
         self.foreground = color;
         try!(self.apply());
 
-        Ok(true)
+        Ok(())
     }
 
-    fn bg(&mut self, color: color::Color) -> io::Result<bool> {
+    fn bg(&mut self, color: color::Color) -> Result<()> {
         self.background = color;
         try!(self.apply());
 
-        Ok(true)
+        Ok(())
     }
 
-    fn attr(&mut self, attr: Attr) -> io::Result<bool> {
+    fn attr(&mut self, attr: Attr) -> Result<()> {
         match attr {
             Attr::ForegroundColor(f) => {
                 self.foreground = f;
                 try!(self.apply());
-                Ok(true)
+                Ok(())
             },
             Attr::BackgroundColor(b) => {
                 self.background = b;
                 try!(self.apply());
-                Ok(true)
+                Ok(())
             },
-            _ => Ok(false)
+            _ => Err(Error::AttributeNotSupported)
         }
     }
 
@@ -187,15 +189,15 @@ impl<T: Write+Send> Terminal for WinConsole<T> {
         }
     }
 
-    fn reset(&mut self) -> io::Result<bool> {
+    fn reset(&mut self) -> Result<()> {
         self.foreground = self.def_foreground;
         self.background = self.def_background;
         try!(self.apply());
 
-        Ok(true)
+        Ok(())
     }
 
-    fn cursor_up(&mut self) -> io::Result<bool> {
+    fn cursor_up(&mut self) -> Result<()> {
         let _unused = self.buf.flush();
         let handle = try!(conout());
         unsafe {
@@ -209,38 +211,38 @@ impl<T: Write+Send> Terminal for WinConsole<T> {
                     if kernel32::SetConsoleCursorPosition(handle, pos) != 0 {
                         Ok(true)
                     } else {
-                        Err(io::Error::last_os_error())
+                        Err(io::Error::last_os_error().into())
                     }
                 }
             } else {
-                Err(io::Error::last_os_error())
+                Err(io::Error::last_os_error().into())
             }
         }
     }
 
-    fn delete_line(&mut self) -> io::Result<bool> {
+    fn delete_line(&mut self) -> Result<()> {
         let _unused = self.buf.flush();
         let handle = try!(conout());
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
             if kernel32::GetConsoleScreenBufferInfo(handle, &mut buffer_info) == 0 {
-                return Err(io::Error::last_os_error())
+                return Err(io::Error::last_os_error().into())
             }
             let pos = buffer_info.dwCursorPosition;
             let size = buffer_info.dwSize;
             let num = (size.X - pos.X) as winapi::DWORD;
             let mut written = 0;
             if kernel32::FillConsoleOutputCharacterW(handle, 0, num, pos, &mut written) == 0 {
-                return Err(io::Error::last_os_error())
+                return Err(io::Error::last_os_error().into())
             }
             if kernel32::FillConsoleOutputAttribute(handle, 0, num, pos, &mut written) == 0 {
-                return Err(io::Error::last_os_error())
+                return Err(io::Error::last_os_error().into())
             }
             Ok(written != 0)
         }
     }
 
-    fn carriage_return(&mut self) -> io::Result<bool> {
+    fn carriage_return(&mut self) -> Result<()> {
         let _unused = self.buf.flush();
         let handle = try!(conout());
         unsafe {
@@ -248,17 +250,17 @@ impl<T: Write+Send> Terminal for WinConsole<T> {
             if kernel32::GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
                 let (x, y) = (buffer_info.dwCursorPosition.X, buffer_info.dwCursorPosition.Y);
                 if x == 0 {
-                    Ok(false)
+                    Err(Error::CursorDestinationInvalid)
                 } else {
                     let pos = winapi::COORD { X: 0, Y: y };
                     if kernel32::SetConsoleCursorPosition(handle, pos) != 0 {
                         Ok(true)
                     } else {
-                        Err(io::Error::last_os_error())
+                        Err(io::Error::last_os_error().into())
                     }
                 }
             } else {
-                Err(io::Error::last_os_error())
+                Err(io::Error::last_os_error().into())
             }
         }
     }

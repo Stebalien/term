@@ -15,7 +15,10 @@
 use std::collections::HashMap;
 use std::io::prelude::*;
 use std::io;
-use super::super::TermInfo;
+
+use terminfo::Error::*;
+use terminfo::TermInfo;
+use Result;
 
 // These are the orders ncurses uses in its compiled format (as of 5.9). Not sure if portable.
 
@@ -179,14 +182,7 @@ fn read_byte(r: &mut io::Read) -> io::Result<u8> {
 
 /// Parse a compiled terminfo entry, using long capability names if `longnames`
 /// is true
-pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
-    macro_rules! try( ($e:expr) => (
-        match $e {
-            Ok(e) => e,
-            Err(e) => return Err(format!("{}", e))
-        }
-    ) );
-
+pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
     let (bnames, snames, nnames) = if longnames {
         (boolfnames, stringfnames, numfnames)
     } else {
@@ -196,8 +192,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
     // Check magic number
     let magic = try!(read_le_u16(file));
     if magic != 0x011A {
-        return Err(format!("invalid magic number: expected {:x}, found {:x}",
-                           0x011A, magic));
+        return Err(BadMagic(magic).into())
     }
 
     // According to the spec, these fields must be >= -1 where -1 means that the feature is not
@@ -207,7 +202,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
             match try!(read_le_u16(file)) as i16 {
                 n if n >= 0 => n as usize,
                 -1 => 0,
-                _ => return Err("incompatible file: length fields must be  >= -1".to_string()),
+                _ => return Err(InvalidLength.into()),
             }
         }}
     }
@@ -219,23 +214,19 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
     let string_table_bytes   = read_nonneg!();
 
     if names_bytes == 0 {
-        return Err("incompatible file: names field must be \
-                    at least 1 byte wide".to_string());
+        return Err(ShortNames.into());
     }
 
     if bools_bytes > boolnames.len() {
-        return Err("incompatible file: more booleans than \
-                    expected".to_string());
+        return Err(TooManyBools.into());
     }
 
     if numbers_count > numnames.len() {
-        return Err("incompatible file: more numbers than \
-                    expected".to_string());
+        return Err(TooManyNumbers.into());
     }
 
     if string_offsets_count > stringnames.len() {
-        return Err("incompatible file: more string offsets than \
-                    expected".to_string());
+        return Err(TooManyStrings.into());
     }
 
     // don't read NUL
@@ -243,7 +234,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
     try!(file.take((names_bytes - 1) as u64).read_to_end(&mut bytes));
     let names_str = match String::from_utf8(bytes) {
         Ok(s)  => s,
-        Err(_) => return Err("input not utf-8".to_string()),
+        Err(e) => return Err(NotUtf8(e.utf8_error()).into())
     };
 
     let term_names: Vec<String> = names_str.split('|')
@@ -251,8 +242,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
                                            .collect();
     // consume NUL
     if try!(read_byte(file)) != b'\0' {
-        return Err("incompatible file: missing null terminator \
-                   for names section".to_string());
+        return Err(NamesMissingNull.into());
     }
 
     let bools_map: HashMap<String, bool> = try! {
@@ -305,7 +295,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
             let nulpos = string_table[offset..string_table_bytes].iter().position(|&b| b == 0);
             match nulpos {
                 Some(len) => Ok((name.to_string(), string_table[offset..offset + len].to_vec())),
-                None => Err("invalid file: missing NUL in string_table".to_string()),
+                None => return Err(::Error::TerminfoParsing(StringsMissingNull)),
             }
         }).collect())
     } else {
