@@ -95,7 +95,7 @@ fn test_conout() {
     assert!(conout().is_ok())
 }
 
-impl<T: Write+Send> WinConsole<T> {
+impl<T: Write + Send> WinConsole<T> {
     fn apply(&mut self) -> io::Result<()> {
         let out = try!(conout());
         let _unused = self.buf.flush();
@@ -143,7 +143,7 @@ impl<T: Write> Write for WinConsole<T> {
     }
 }
 
-impl<T: Write+Send> Terminal for WinConsole<T> {
+impl<T: Write + Send> Terminal for WinConsole<T> {
     type Output = T;
 
     fn fg(&mut self, color: color::Color) -> io::Result<bool> {

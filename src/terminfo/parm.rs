@@ -61,14 +61,18 @@ impl Variables {
     /// Return a new zero-initialized Variables
     pub fn new() -> Variables {
         Variables {
-            sta: [Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
-                  Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
-                  Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
-                  Number(0), Number(0), Number(0), Number(0), Number(0)],
-            dyn: [Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
-                  Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
-                  Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
-                  Number(0), Number(0), Number(0), Number(0), Number(0)],
+            sta: [
+                Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                Number(0), Number(0), Number(0), Number(0), Number(0)
+            ],
+            dyn: [
+                Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                Number(0), Number(0), Number(0), Number(0), Number(0)
+            ],
         }
     }
 }
@@ -91,8 +95,10 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
     let mut stack: Vec<Param> = Vec::new();
 
     // Copy parameters into a local vector for mutability
-    let mut mparams = [Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
-                       Number(0), Number(0), Number(0)];
+    let mut mparams = [
+    	Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+        Number(0), Number(0), Number(0)
+    ];
     for (dst, src) in mparams.iter_mut().zip(params.iter()) {
         *dst = (*src).clone();
     }
