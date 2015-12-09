@@ -246,7 +246,7 @@ impl<T: Write+Send> Terminal for WinConsole<T> {
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
             if kernel32::GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
-                let winapi::wincon::COORD { X: x, Y: y } = buffer_info.dwCursorPosition;
+                let winapi::COORD { X: x, Y: y } = buffer_info.dwCursorPosition;
                 if x == 0 {
                     Ok(false)
                 } else {
