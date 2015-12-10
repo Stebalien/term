@@ -82,48 +82,40 @@ pub mod terminfo;
 mod win;
 
 /// Alias for stdout terminals.
-pub type StdoutTerminal = Terminal<Output=Stdout> + Send;
+pub type StdoutTerminal = Terminal<Output = Stdout> + Send;
 /// Alias for stderr terminals.
-pub type StderrTerminal = Terminal<Output=Stderr> + Send;
+pub type StderrTerminal = Terminal<Output = Stderr> + Send;
 
 #[cfg(not(windows))]
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
 /// opened.
 pub fn stdout() -> Option<Box<StdoutTerminal>> {
-    TerminfoTerminal::new(io::stdout()).map(|t| {
-        Box::new(t) as Box<StdoutTerminal>
-    })
+    TerminfoTerminal::new(io::stdout()).map(|t| Box::new(t) as Box<StdoutTerminal>)
 }
 
 #[cfg(windows)]
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
 /// opened.
 pub fn stdout() -> Option<Box<StdoutTerminal>> {
-    TerminfoTerminal::new(io::stdout()).map(|t| {
-        Box::new(t) as Box<StdoutTerminal>
-    }).or_else(|| WinConsole::new(io::stdout()).ok().map(|t| {
-        Box::new(t) as Box<StdoutTerminal>
-    }))
+    TerminfoTerminal::new(io::stdout())
+        .map(|t| Box::new(t) as Box<StdoutTerminal>)
+        .or_else(|| WinConsole::new(io::stdout()).ok().map(|t| Box::new(t) as Box<StdoutTerminal>))
 }
 
 #[cfg(not(windows))]
 /// Return a Terminal wrapping stderr, or None if a terminal couldn't be
 /// opened.
 pub fn stderr() -> Option<Box<StderrTerminal>> {
-    TerminfoTerminal::new(io::stderr()).map(|t| {
-        Box::new(t) as Box<StderrTerminal>
-    })
+    TerminfoTerminal::new(io::stderr()).map(|t| Box::new(t) as Box<StderrTerminal>)
 }
 
 #[cfg(windows)]
 /// Return a Terminal wrapping stderr, or None if a terminal couldn't be
 /// opened.
 pub fn stderr() -> Option<Box<StderrTerminal>> {
-    TerminfoTerminal::new(io::stderr()).map(|t| {
-        Box::new(t) as Box<StderrTerminal>
-    }).or_else(|| WinConsole::new(io::stderr()).ok().map(|t| {
-        Box::new(t) as Box<StderrTerminal>
-    }))
+    TerminfoTerminal::new(io::stderr())
+        .map(|t| Box::new(t) as Box<StderrTerminal>)
+        .or_else(|| WinConsole::new(io::stderr()).ok().map(|t| Box::new(t) as Box<StderrTerminal>))
 }
 
 
@@ -133,23 +125,23 @@ pub mod color {
     /// Number for a terminal color
     pub type Color = u16;
 
-    pub const BLACK:   Color = 0;
-    pub const RED:     Color = 1;
-    pub const GREEN:   Color = 2;
-    pub const YELLOW:  Color = 3;
-    pub const BLUE:    Color = 4;
+    pub const BLACK: Color = 0;
+    pub const RED: Color = 1;
+    pub const GREEN: Color = 2;
+    pub const YELLOW: Color = 3;
+    pub const BLUE: Color = 4;
     pub const MAGENTA: Color = 5;
-    pub const CYAN:    Color = 6;
-    pub const WHITE:   Color = 7;
+    pub const CYAN: Color = 6;
+    pub const WHITE: Color = 7;
 
-    pub const BRIGHT_BLACK:   Color = 8;
-    pub const BRIGHT_RED:     Color = 9;
-    pub const BRIGHT_GREEN:   Color = 10;
-    pub const BRIGHT_YELLOW:  Color = 11;
-    pub const BRIGHT_BLUE:    Color = 12;
+    pub const BRIGHT_BLACK: Color = 8;
+    pub const BRIGHT_RED: Color = 9;
+    pub const BRIGHT_GREEN: Color = 10;
+    pub const BRIGHT_YELLOW: Color = 11;
+    pub const BRIGHT_BLUE: Color = 12;
     pub const BRIGHT_MAGENTA: Color = 13;
-    pub const BRIGHT_CYAN:    Color = 14;
-    pub const BRIGHT_WHITE:   Color = 15;
+    pub const BRIGHT_CYAN: Color = 14;
+    pub const BRIGHT_WHITE: Color = 15;
 }
 
 /// Terminal attributes for use with term.attr().
@@ -178,7 +170,7 @@ pub enum Attr {
     /// Convenience attribute to set the foreground color
     ForegroundColor(color::Color),
     /// Convenience attribute to set the background color
-    BackgroundColor(color::Color)
+    BackgroundColor(color::Color),
 }
 
 /// A terminal with similar capabilities to an ANSI Terminal

@@ -173,7 +173,7 @@ fn read_le_u16(r: &mut io::Read) -> io::Result<u16> {
 fn read_byte(r: &mut io::Read) -> io::Result<u8> {
     match r.bytes().next() {
         Some(s) => s,
-        None => Err(io::Error::new(io::ErrorKind::Other, "end of file"))
+        None => Err(io::Error::new(io::ErrorKind::Other, "end of file")),
     }
 }
 
@@ -197,7 +197,8 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
     let magic = try!(read_le_u16(file));
     if magic != 0x011A {
         return Err(format!("invalid magic number: expected {:x}, found {:x}",
-                           0x011A, magic));
+                           0x011A,
+                           magic));
     }
 
     // According to the spec, these fields must be >= -1 where -1 means that the feature is not
@@ -212,37 +213,33 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
         }}
     }
 
-    let names_bytes          = read_nonneg!();
-    let bools_bytes          = read_nonneg!();
-    let numbers_count        = read_nonneg!();
+    let names_bytes = read_nonneg!();
+    let bools_bytes = read_nonneg!();
+    let numbers_count = read_nonneg!();
     let string_offsets_count = read_nonneg!();
-    let string_table_bytes   = read_nonneg!();
+    let string_table_bytes = read_nonneg!();
 
     if names_bytes == 0 {
-        return Err("incompatible file: names field must be \
-                    at least 1 byte wide".to_string());
+        return Err("incompatible file: names field must be at least 1 byte wide".to_string());
     }
 
     if bools_bytes > boolnames.len() {
-        return Err("incompatible file: more booleans than \
-                    expected".to_string());
+        return Err("incompatible file: more booleans than expected".to_string());
     }
 
     if numbers_count > numnames.len() {
-        return Err("incompatible file: more numbers than \
-                    expected".to_string());
+        return Err("incompatible file: more numbers than expected".to_string());
     }
 
     if string_offsets_count > stringnames.len() {
-        return Err("incompatible file: more string offsets than \
-                    expected".to_string());
+        return Err("incompatible file: more string offsets than expected".to_string());
     }
 
     // don't read NUL
     let mut bytes = Vec::new();
     try!(file.take((names_bytes - 1) as u64).read_to_end(&mut bytes));
     let names_str = match String::from_utf8(bytes) {
-        Ok(s)  => s,
+        Ok(s) => s,
         Err(_) => return Err("input not utf-8".to_string()),
     };
 
@@ -251,8 +248,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
                                            .collect();
     // consume NUL
     if try!(read_byte(file)) != b'\0' {
-        return Err("incompatible file: missing null terminator \
-                   for names section".to_string());
+        return Err("incompatible file: missing null terminator for names section".to_string());
     }
 
     let bools_map: HashMap<String, bool> = try! {
@@ -276,9 +272,9 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
     };
 
     let string_map: HashMap<String, Vec<u8>> = if string_offsets_count > 0 {
-        let string_offsets: Vec<u16> = try!((0..string_offsets_count).map(|_| {
-            read_le_u16(file)
-        }).collect());
+        let string_offsets: Vec<u16> = try!((0..string_offsets_count)
+                                                .map(|_| read_le_u16(file))
+                                                .collect());
 
         let mut string_table = Vec::new();
         try!(file.take(string_table_bytes as u64).read_to_end(&mut string_table));
@@ -317,7 +313,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo, String> {
         names: term_names,
         bools: bools_map,
         numbers: numbers_map,
-        strings: string_map
+        strings: string_map,
     })
 }
 
@@ -333,10 +329,10 @@ pub fn msys_terminfo() -> TermInfo {
     numbers.insert("colors".to_string(), 8u16);
 
     TermInfo {
-        names: vec!("cygwin".to_string()), // msys is a fork of an older cygwin version
+        names: vec!["cygwin".to_string()], // msys is a fork of an older cygwin version
         bools: HashMap::new(),
         numbers: numbers,
-        strings: strings
+        strings: strings,
     }
 }
 
