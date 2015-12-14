@@ -50,7 +50,7 @@ pub enum Param {
 }
 
 /// An error from interpreting a parameterized string.
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Error {
     /// Data was requested from the stack, but the stack didn't have enough elements.
     StackUnderflow,
@@ -562,7 +562,7 @@ mod test {
         let mut varstruct = Variables::new();
         let vars = &mut varstruct;
         fn get_res(fmt: &str, cap: &str, params: &[Param], vars: &mut Variables) ->
-            Result<Vec<u8>, String>
+            Result<Vec<u8>, super::Error>
         {
             let mut u8v: Vec<_> = fmt.bytes().collect();
             u8v.extend(cap.as_bytes().iter().map(|&b| b));

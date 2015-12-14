@@ -48,7 +48,7 @@
 //!     t.fg(term::color::RED).unwrap();
 //!     writeln!(t, "world!").unwrap();
 //!
-//!     assert!(t.reset().unwrap());
+//!     t.reset().unwrap();
 //! }
 //! ```
 //!
@@ -190,8 +190,8 @@ pub enum Error {
     TerminfoParsing(terminfo::Error),
     /// Indicates an error expanding a parameterized string from the terminfo database
     ParameterizedExpansion(terminfo::parm::Error),
-    /// Indicates that the terminal does not support the requested attribute
-    AttributeNotSupported,
+    /// Indicates that the terminal does not support the requested operation.
+    NotSupported,
     /// Indicates that the `TERM` environment variable was unset, and thus we were unable to detect
     /// which terminal we should be using.
     TermUnset,
@@ -199,10 +199,74 @@ pub enum Error {
     TerminfoEntryNotFound,
     /// Indicates that the cursor could not be moved to the requested position.
     CursorDestinationInvalid,
-    /// Indicates that the terminal does not support the requested color.
+    /// Indicates that the terminal does not support displaying the requested color.
     ///
-    /// This is like `AttributeNotSupported`, but more specific.
-    ColorNotSupported,
+    /// This is like `NotSupported`, but more specific.
+    ColorOutOfRange,
+    #[doc(hidden)]
+    /// Please don't match against this - if you do, we can't promise we won't break your crate
+    /// with a semver-compliant version bump.
+    __Nonexhaustive,
+}
+
+// manually implemented because std::io::Error does not implement Eq/PartialEq
+impl std::cmp::PartialEq for Error {
+    fn eq(&self, other: &Error) -> bool {
+        use Error::*;
+        match self {
+            &Io(_) => {
+                false
+            }
+            &TerminfoParsing(ref inner1) => {
+                match other {
+                    &TerminfoParsing(ref inner2) => inner1 == inner2,
+                    _ => false
+                }
+            }
+            &ParameterizedExpansion(ref inner1) => {
+                match other {
+                    &ParameterizedExpansion(ref inner2) => inner1 == inner2,
+                    _ => false
+                }
+            }
+            &NotSupported => {
+                match other {
+                    &NotSupported => true,
+                    _ => false
+                }
+            }
+            &TermUnset => {
+                match other {
+                    &TermUnset => true,
+                    _ => false
+                }
+            }
+            &TerminfoEntryNotFound => {
+                match other {
+                    &TerminfoEntryNotFound => true,
+                    _ => false
+                }
+            }
+            &CursorDestinationInvalid => {
+                match other {
+                    &CursorDestinationInvalid => true,
+                    _ => false
+                }
+            }
+            &ColorOutOfRange => {
+                match other {
+                    &ColorOutOfRange => true,
+                    _ => false
+                }
+            }
+            &__Nonexhaustive => {
+                match other {
+                    &__Nonexhaustive => true,
+                    _ => false
+                }
+            }
+        }
+    }
 }
 
 /// The canonical `Result` type using this crate's Error type.
@@ -227,11 +291,12 @@ impl std::error::Error for Error {
             &Io(ref io) => io.description(),
             &TerminfoParsing(ref e) => e.description(),
             &ParameterizedExpansion(ref e) => e.description(),
-            &AttributeNotSupported => "attribute not supported by the terminal",
+            &NotSupported => "operation not supported by the terminal",
             &TermUnset => "TERM environment variable unset, unable to detect a terminal",
             &TerminfoEntryNotFound => "could not find a terminfo entry for this terminal",
             &CursorDestinationInvalid => "could not move cursor to requested position",
-            &ColorNotSupported => "color not supported by the terminal",
+            &ColorOutOfRange => "color not supported by the terminal",
+            &__Nonexhaustive => "placeholder variant that shouldn't be used",
         }
     }
 

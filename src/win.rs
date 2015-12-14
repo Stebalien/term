@@ -176,7 +176,7 @@ impl<T: Write+Send> Terminal for WinConsole<T> {
                 try!(self.apply());
                 Ok(())
             },
-            _ => Err(Error::AttributeNotSupported)
+            _ => Err(Error::NotSupported)
         }
     }
 

@@ -81,7 +81,7 @@ impl TermInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 /// An error from parsing a terminfo entry
 pub enum Error {
     /// The "magic" number at the start of the file was wrong.
@@ -194,7 +194,7 @@ impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
         if self.num_colors > color {
             return self.apply_cap("setaf", &[Param::Number(color as i32)]);
         }
-        Err(::Error::ColorNotSupported)
+        Err(::Error::ColorOutOfRange)
     }
 
     fn bg(&mut self, color: color::Color) -> Result<()> {
@@ -202,7 +202,7 @@ impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
         if self.num_colors > color {
             return self.apply_cap("setab", &[Param::Number(color as i32)]);
         }
-        Err(::Error::ColorNotSupported)
+        Err(::Error::ColorOutOfRange)
     }
 
     fn attr(&mut self, attr: Attr) -> Result<()> {
@@ -237,7 +237,7 @@ impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
                 Ok(cmd) => cmd,
                 Err(e) => return Err(e.into()),
             },
-            None => return Err(::Error::AttributeNotSupported),
+            None => return Err(::Error::NotSupported),
         };
         try!(self.out.write_all(&cmd));
         Ok(())
@@ -298,7 +298,7 @@ impl<T: Write+Send> TerminfoTerminal<T> {
                 Ok(s) => { try!(self.out.write_all(&s)); Ok(()) }
                 Err(e) => Err(e.into()),
             },
-            None => Err(::Error::AttributeNotSupported)
+            None => Err(::Error::NotSupported)
         }
     }
 }
