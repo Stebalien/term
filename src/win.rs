@@ -205,11 +205,15 @@ impl<T: Write+Send> Terminal for WinConsole<T> {
             if kernel32::GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
                 let (x, y) = (buffer_info.dwCursorPosition.X, buffer_info.dwCursorPosition.Y);
                 if y == 0 {
-                    Ok(false)
+                    // Even though this might want to be a CursorPositionInvalid, on Unix there
+                    // is no checking to see if the cursor is already on the first line.
+                    // I'm not sure what the ideal behavior is, but I think it'd be silly to have
+                    // cursor_up fail in this case.
+                    Ok(())
                 } else {
                     let pos = winapi::COORD { X: x, Y: y - 1 };
                     if kernel32::SetConsoleCursorPosition(handle, pos) != 0 {
-                        Ok(true)
+                        Ok(())
                     } else {
                         Err(io::Error::last_os_error().into())
                     }
@@ -238,7 +242,9 @@ impl<T: Write+Send> Terminal for WinConsole<T> {
             if kernel32::FillConsoleOutputAttribute(handle, 0, num, pos, &mut written) == 0 {
                 return Err(io::Error::last_os_error().into())
             }
-            Ok(written != 0)
+            // Similar reasoning for not failing as in cursor_up -- it doesn't even make sense to
+            // me that these APIs could have written 0, unless the terminal is width zero.
+            Ok(())
         }
     }
 
@@ -254,7 +260,7 @@ impl<T: Write+Send> Terminal for WinConsole<T> {
                 } else {
                     let pos = winapi::COORD { X: 0, Y: y };
                     if kernel32::SetConsoleCursorPosition(handle, pos) != 0 {
-                        Ok(true)
+                        Ok(())
                     } else {
                         Err(io::Error::last_os_error().into())
                     }
