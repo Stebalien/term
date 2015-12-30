@@ -31,14 +31,14 @@ enum States {
     SeekIfElse(usize),
     SeekIfElsePercent(usize),
     SeekIfEnd(usize),
-    SeekIfEndPercent(usize)
+    SeekIfEndPercent(usize),
 }
 
 #[derive(Copy, PartialEq, Clone)]
 enum FormatState {
     FormatStateFlags,
     FormatStateWidth,
-    FormatStatePrecision
+    FormatStatePrecision,
 }
 
 /// Types of parameters a capability can use
@@ -46,7 +46,7 @@ enum FormatState {
 #[derive(Clone)]
 pub enum Param {
     Words(String),
-    Number(i32)
+    Number(i32),
 }
 
 /// An error from interpreting a parameterized string.
@@ -77,7 +77,7 @@ pub enum Error {
 
 impl ::std::fmt::Display for Error {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        use ::std::error::Error;
+        use std::error::Error;
         f.write_str(self.description())
     }
 }
@@ -109,29 +109,21 @@ pub struct Variables {
     /// Static variables A-Z
     sta: [Param; 26],
     /// Dynamic variables a-z
-    dyn: [Param; 26]
+    dyn: [Param; 26],
 }
 
 impl Variables {
     /// Return a new zero-initialized Variables
     pub fn new() -> Variables {
         Variables {
-            sta: [
-                Number(0), Number(0), Number(0), Number(0), Number(0),
-                Number(0), Number(0), Number(0), Number(0), Number(0),
-                Number(0), Number(0), Number(0), Number(0), Number(0),
-                Number(0), Number(0), Number(0), Number(0), Number(0),
-                Number(0), Number(0), Number(0), Number(0), Number(0),
-                Number(0),
-            ],
-            dyn: [
-                Number(0), Number(0), Number(0), Number(0), Number(0),
-                Number(0), Number(0), Number(0), Number(0), Number(0),
-                Number(0), Number(0), Number(0), Number(0), Number(0),
-                Number(0), Number(0), Number(0), Number(0), Number(0),
-                Number(0), Number(0), Number(0), Number(0), Number(0),
-                Number(0),
-            ],
+            sta: [Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                  Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                  Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                  Number(0), Number(0), Number(0), Number(0), Number(0)],
+            dyn: [Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                  Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                  Number(0), Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                  Number(0), Number(0), Number(0), Number(0), Number(0)],
         }
     }
 }
@@ -154,10 +146,8 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
     let mut stack: Vec<Param> = Vec::new();
 
     // Copy parameters into a local vector for mutability
-    let mut mparams = [
-        Number(0), Number(0), Number(0), Number(0), Number(0),
-        Number(0), Number(0), Number(0), Number(0),
-    ];
+    let mut mparams = [Number(0), Number(0), Number(0), Number(0), Number(0), Number(0),
+                       Number(0), Number(0), Number(0)];
     for (dst, src) in mparams.iter_mut().zip(params.iter()) {
         *dst = (*src).clone();
     }
@@ -172,80 +162,109 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                 } else {
                     output.push(c);
                 }
-            },
+            }
             Percent => {
                 match cur {
-                    '%' => { output.push(c); state = Nothing },
-                    'c' => match stack.pop() {
-                        // if c is 0, use 0200 (128) for ncurses compatibility
-                        Some(Number(0)) => output.push(128u8),
-                        // Don't check bounds. ncurses just casts and truncates.
-                        Some(Number(c)) => output.push(c as u8),
-                        Some(_) => return Err(Error::TypeMismatch),
-                        None => return Err(Error::StackUnderflow),
-                    },
+                    '%' => {
+                        output.push(c);
+                        state = Nothing
+                    }
+                    'c' => {
+                        match stack.pop() {
+                            // if c is 0, use 0200 (128) for ncurses compatibility
+                            Some(Number(0)) => output.push(128u8),
+                            // Don't check bounds. ncurses just casts and truncates.
+                            Some(Number(c)) => output.push(c as u8),
+                            Some(_) => return Err(Error::TypeMismatch),
+                            None => return Err(Error::StackUnderflow),
+                        }
+                    }
                     'p' => state = PushParam,
                     'P' => state = SetVar,
                     'g' => state = GetVar,
                     '\'' => state = CharConstant,
                     '{' => state = IntConstant(0),
-                    'l' => match stack.pop() {
-                        Some(Words(s)) => stack.push(Number(s.len() as i32)),
-                        Some(_) => return Err(Error::TypeMismatch),
-                        None => return Err(Error::StackUnderflow),
-                    },
-                    '+'|'-'|'/'|'*'|'^'|'&'|'|'|'m' => match (stack.pop(), stack.pop()) {
-                        (Some(Number(y)), Some(Number(x))) => stack.push(Number(match cur {
-                            '+' => x + y,
-                            '-' => x - y,
-                            '*' => x * y,
-                            '/' => x / y,
-                            '|' => x | y,
-                            '&' => x & y,
-                            '^' => x ^ y,
-                            'm' => x % y,
-                            _ => unreachable!("logic error"),
-                        })),
-                        (Some(_), Some(_)) => return Err(Error::TypeMismatch),
-                        _ => return Err(Error::StackUnderflow),
-                    },
-                    '='|'>'|'<'|'A'|'O' => match (stack.pop(), stack.pop()) {
-                        (Some(Number(y)), Some(Number(x))) => stack.push(Number(if match cur {
-                            '=' => x == y,
-                            '<' => x < y,
-                            '>' => x > y,
-                            'A' => x > 0 && y > 0,
-                            'O' => x > 0 || y > 0,
-                            _ => unreachable!("logic error"),
-                        } { 1 } else { 0 })),
-                        (Some(_), Some(_)) => return Err(Error::TypeMismatch),
-                        _ => return Err(Error::StackUnderflow),
-                    },
-                    '!'|'~' => match stack.pop() {
-                        Some(Number(x)) => stack.push(Number(match cur {
-                            '!' if x > 0 => 0,
-                            '!' => 1,
-                            '~' => !x,
-                            _ => unreachable!("logic error"),
-                        })),
-                        Some(_) => return Err(Error::TypeMismatch),
-                        None => return Err(Error::StackUnderflow),
-                    },
-                    'i' => match (&mparams[0], &mparams[1]) {
-                        (&Number(x), &Number(y)) => {
-                            mparams[0] = Number(x+1);
-                            mparams[1] = Number(y+1);
-                        },
-                        (_, _) => return Err(Error::TypeMismatch),
-                    },
+                    'l' => {
+                        match stack.pop() {
+                            Some(Words(s)) => stack.push(Number(s.len() as i32)),
+                            Some(_) => return Err(Error::TypeMismatch),
+                            None => return Err(Error::StackUnderflow),
+                        }
+                    }
+                    '+' | '-' | '/' | '*' | '^' | '&' | '|' | 'm' => {
+                        match (stack.pop(), stack.pop()) {
+                            (Some(Number(y)), Some(Number(x))) => {
+                                stack.push(Number(match cur {
+                                    '+' => x + y,
+                                    '-' => x - y,
+                                    '*' => x * y,
+                                    '/' => x / y,
+                                    '|' => x | y,
+                                    '&' => x & y,
+                                    '^' => x ^ y,
+                                    'm' => x % y,
+                                    _ => unreachable!("logic error"),
+                                }))
+                            }
+                            (Some(_), Some(_)) => return Err(Error::TypeMismatch),
+                            _ => return Err(Error::StackUnderflow),
+                        }
+                    }
+                    '=' | '>' | '<' | 'A' | 'O' => {
+                        match (stack.pop(), stack.pop()) {
+                            (Some(Number(y)), Some(Number(x))) => {
+                                stack.push(Number(if match cur {
+                                    '=' => x == y,
+                                    '<' => x < y,
+                                    '>' => x > y,
+                                    'A' => x > 0 && y > 0,
+                                    'O' => x > 0 || y > 0,
+                                    _ => unreachable!("logic error"),
+                                } {
+                                    1
+                                } else {
+                                    0
+                                }))
+                            }
+                            (Some(_), Some(_)) => return Err(Error::TypeMismatch),
+                            _ => return Err(Error::StackUnderflow),
+                        }
+                    }
+                    '!' | '~' => {
+                        match stack.pop() {
+                            Some(Number(x)) => {
+                                stack.push(Number(match cur {
+                                    '!' if x > 0 => 0,
+                                    '!' => 1,
+                                    '~' => !x,
+                                    _ => unreachable!("logic error"),
+                                }))
+                            }
+                            Some(_) => return Err(Error::TypeMismatch),
+                            None => return Err(Error::StackUnderflow),
+                        }
+                    }
+                    'i' => {
+                        match (&mparams[0], &mparams[1]) {
+                            (&Number(x), &Number(y)) => {
+                                mparams[0] = Number(x + 1);
+                                mparams[1] = Number(y + 1);
+                            }
+                            (_, _) => return Err(Error::TypeMismatch),
+                        }
+                    }
 
                     // printf-style support for %doxXs
-                    'd'|'o'|'x'|'X'|'s' => if let Some(arg) = stack.pop() {
-                        let flags = Flags::new();
-                        let res = try!(format(arg, FormatOp::from_char(cur), flags));
-                        output.extend(res.iter().map(|x| *x));
-                    } else { return Err(Error::StackUnderflow); },
-                    ':'|'#'|' '|'.'|'0'...'9' => {
+                    'd' | 'o' | 'x' | 'X' | 's' => {
+                        if let Some(arg) = stack.pop() {
+                            let flags = Flags::new();
+                            let res = try!(format(arg, FormatOp::from_char(cur), flags));
+                            output.extend(res.iter().map(|x| *x));
+                        } else {
+                            return Err(Error::StackUnderflow);
+                        }
+                    }
+                    ':' | '#' | ' ' | '.' | '0'...'9' => {
                         let mut flags = Flags::new();
                         let mut fstate = FormatStateFlags;
                         match cur {
@@ -257,46 +276,53 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                                 flags.width = cur as usize - '0' as usize;
                                 fstate = FormatStateWidth;
                             }
-                            _ => unreachable!("logic error")
+                            _ => unreachable!("logic error"),
                         }
                         state = FormatPattern(flags, fstate);
                     }
 
                     // conditionals
                     '?' => (),
-                    't' => match stack.pop() {
-                        Some(Number(0)) => state = SeekIfElse(0),
-                        Some(Number(_)) => (),
-                        Some(_) => return Err(Error::TypeMismatch),
-                        None => return Err(Error::StackUnderflow),
-                    },
+                    't' => {
+                        match stack.pop() {
+                            Some(Number(0)) => state = SeekIfElse(0),
+                            Some(Number(_)) => (),
+                            Some(_) => return Err(Error::TypeMismatch),
+                            None => return Err(Error::StackUnderflow),
+                        }
+                    }
                     'e' => state = SeekIfEnd(0),
                     ';' => (),
                     c => return Err(Error::UnrecognizedFormatOption(c)),
                 }
-            },
+            }
             PushParam => {
                 // params are 1-indexed
                 stack.push(mparams[match cur.to_digit(10) {
-                    Some(d) => d as usize - 1,
-                    None => return Err(Error::InvalidParameterIndex(cur)),
-                }].clone());
-            },
+                               Some(d) => d as usize - 1,
+                               None => return Err(Error::InvalidParameterIndex(cur)),
+                           }]
+                           .clone());
+            }
             SetVar => {
                 if cur >= 'A' && cur <= 'Z' {
                     if let Some(arg) = stack.pop() {
                         let idx = (cur as u8) - b'A';
                         vars.sta[idx as usize] = arg;
-                    } else { return Err(Error::StackUnderflow) }
+                    } else {
+                        return Err(Error::StackUnderflow);
+                    }
                 } else if cur >= 'a' && cur <= 'z' {
                     if let Some(arg) = stack.pop() {
                         let idx = (cur as u8) - b'a';
                         vars.dyn[idx as usize] = arg;
-                    } else { return Err(Error::StackUnderflow) }
+                    } else {
+                        return Err(Error::StackUnderflow);
+                    }
                 } else {
-                    return Err(Error::InvalidVariableName(cur))
+                    return Err(Error::InvalidVariableName(cur));
                 }
-            },
+            }
             GetVar => {
                 if cur >= 'A' && cur <= 'Z' {
                     let idx = (cur as u8) - b'A';
@@ -305,22 +331,24 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                     let idx = (cur as u8) - b'a';
                     stack.push(vars.dyn[idx as usize].clone());
                 } else {
-                    return Err(Error::InvalidVariableName(cur))
+                    return Err(Error::InvalidVariableName(cur));
                 }
-            },
+            }
             CharConstant => {
                 stack.push(Number(c as i32));
                 state = CharClose;
-            },
-            CharClose => if cur != '\'' {
-                return Err(Error::MalformedCharacterConstant)
-            },
+            }
+            CharClose => {
+                if cur != '\'' {
+                    return Err(Error::MalformedCharacterConstant);
+                }
+            }
             IntConstant(i) => {
                 if cur == '}' {
                     stack.push(Number(i));
                     state = Nothing;
                 } else if let Some(digit) = cur.to_digit(10) {
-                    match i.checked_mul(10).and_then(|i_ten|i_ten.checked_add(digit as i32)) {
+                    match i.checked_mul(10).and_then(|i_ten| i_ten.checked_add(digit as i32)) {
                         Some(i) => {
                             state = IntConstant(i);
                             old_state = Nothing;
@@ -334,47 +362,55 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
             FormatPattern(ref mut flags, ref mut fstate) => {
                 old_state = Nothing;
                 match (*fstate, cur) {
-                    (_,'d')|(_,'o')|(_,'x')|(_,'X')|(_,'s') => if let Some(arg) = stack.pop() {
-                        let res = try!(format(arg, FormatOp::from_char(cur), *flags));
-                        output.extend(res.iter().map(|x| *x));
-                        // will cause state to go to Nothing
-                        old_state = FormatPattern(*flags, *fstate);
-                    } else { return Err(Error::StackUnderflow) },
-                    (FormatStateFlags,'#') => {
+                    (_, 'd') | (_, 'o') | (_, 'x') | (_, 'X') | (_, 's') => {
+                        if let Some(arg) = stack.pop() {
+                            let res = try!(format(arg, FormatOp::from_char(cur), *flags));
+                            output.extend(res.iter().map(|x| *x));
+                            // will cause state to go to Nothing
+                            old_state = FormatPattern(*flags, *fstate);
+                        } else {
+                            return Err(Error::StackUnderflow);
+                        }
+                    }
+                    (FormatStateFlags, '#') => {
                         flags.alternate = true;
                     }
-                    (FormatStateFlags,'-') => {
+                    (FormatStateFlags, '-') => {
                         flags.left = true;
                     }
-                    (FormatStateFlags,'+') => {
+                    (FormatStateFlags, '+') => {
                         flags.sign = true;
                     }
-                    (FormatStateFlags,' ') => {
+                    (FormatStateFlags, ' ') => {
                         flags.space = true;
                     }
-                    (FormatStateFlags,'0'...'9') => {
+                    (FormatStateFlags, '0'...'9') => {
                         flags.width = cur as usize - '0' as usize;
                         *fstate = FormatStateWidth;
                     }
-                    (FormatStateFlags,'.') => {
+                    (FormatStateFlags, '.') => {
                         *fstate = FormatStatePrecision;
                     }
-                    (FormatStateWidth,'0'...'9') => {
-                        flags.width = match flags.width.checked_mul(10).and_then(|w| w.checked_add(cur as usize - '0' as usize)) {
+                    (FormatStateWidth, '0'...'9') => {
+                        flags.width = match flags.width.checked_mul(10).and_then(|w| {
+                            w.checked_add(cur as usize - '0' as usize)
+                        }) {
                             Some(width) => width,
                             None => return Err(Error::FormatWidthOverflow),
                         }
                     }
-                    (FormatStateWidth,'.') => {
+                    (FormatStateWidth, '.') => {
                         *fstate = FormatStatePrecision;
                     }
-                    (FormatStatePrecision,'0'...'9') => {
-                        flags.precision = match flags.precision.checked_mul(10).and_then(|w| w.checked_add(cur as usize - '0' as usize)) {
+                    (FormatStatePrecision, '0'...'9') => {
+                        flags.precision = match flags.precision.checked_mul(10).and_then(|w| {
+                            w.checked_add(cur as usize - '0' as usize)
+                        }) {
                             Some(precision) => precision,
                             None => return Err(Error::FormatPrecisionOverflow),
                         }
                     }
-                    _ => return Err(Error::UnrecognizedFormatOption(cur))
+                    _ => return Err(Error::UnrecognizedFormatOption(cur)),
                 }
             }
             SeekIfElse(level) => {
@@ -388,12 +424,12 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                     if level == 0 {
                         state = Nothing;
                     } else {
-                        state = SeekIfElse(level-1);
+                        state = SeekIfElse(level - 1);
                     }
                 } else if cur == 'e' && level == 0 {
                     state = Nothing;
                 } else if cur == '?' {
-                    state = SeekIfElse(level+1);
+                    state = SeekIfElse(level + 1);
                 } else {
                     state = SeekIfElse(level);
                 }
@@ -409,10 +445,10 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                     if level == 0 {
                         state = Nothing;
                     } else {
-                        state = SeekIfEnd(level-1);
+                        state = SeekIfEnd(level - 1);
                     }
                 } else if cur == '?' {
-                    state = SeekIfEnd(level+1);
+                    state = SeekIfEnd(level + 1);
                 } else {
                     state = SeekIfEnd(level);
                 }
@@ -432,13 +468,19 @@ struct Flags {
     alternate: bool,
     left: bool,
     sign: bool,
-    space: bool
+    space: bool,
 }
 
 impl Flags {
     fn new() -> Flags {
-        Flags{ width: 0, precision: 0, alternate: false,
-               left: false, sign: false, space: false }
+        Flags {
+            width: 0,
+            precision: 0,
+            alternate: false,
+            left: false,
+            sign: false,
+            space: false,
+        }
     }
 }
 
@@ -448,7 +490,7 @@ enum FormatOp {
     FormatOctal,
     FormatHex,
     FormatHEX,
-    FormatString
+    FormatString,
 }
 
 impl FormatOp {
@@ -459,59 +501,64 @@ impl FormatOp {
             'x' => FormatHex,
             'X' => FormatHEX,
             's' => FormatString,
-            _ => panic!("bad FormatOp char")
+            _ => panic!("bad FormatOp char"),
         }
     }
 }
 
 fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8>, Error> {
     let mut s = match val {
-        Number(d) => match op {
-            FormatDigit => {
-                if flags.sign {
-                    format!("{:+01$}", d, flags.precision)
-                } else if d < 0 {
-                    // C doesn't take sign into account in precision calculation.
-                    format!("{:01$}", d, flags.precision + 1)
-                } else if flags.space {
-                    format!(" {:01$}", d, flags.precision)
-                } else {
-                    format!("{:01$}", d, flags.precision)
+        Number(d) => {
+            match op {
+                FormatDigit => {
+                    if flags.sign {
+                        format!("{:+01$}", d, flags.precision)
+                    } else if d < 0 {
+                        // C doesn't take sign into account in precision calculation.
+                        format!("{:01$}", d, flags.precision + 1)
+                    } else if flags.space {
+                        format!(" {:01$}", d, flags.precision)
+                    } else {
+                        format!("{:01$}", d, flags.precision)
+                    }
                 }
-            },
-            FormatOctal => {
-                if flags.alternate {
-                    // Leading octal zero counts against precision.
-                    format!("0{:01$o}", d, flags.precision.saturating_sub(1))
-                } else {
-                    format!("{:01$o}", d, flags.precision)
+                FormatOctal => {
+                    if flags.alternate {
+                        // Leading octal zero counts against precision.
+                        format!("0{:01$o}", d, flags.precision.saturating_sub(1))
+                    } else {
+                        format!("{:01$o}", d, flags.precision)
+                    }
                 }
-            },
-            FormatHex => {
-                if flags.alternate && d != 0 {
-                    format!("0x{:01$x}", d, flags.precision)
-                } else {
-                    format!("{:01$x}", d, flags.precision)
+                FormatHex => {
+                    if flags.alternate && d != 0 {
+                        format!("0x{:01$x}", d, flags.precision)
+                    } else {
+                        format!("{:01$x}", d, flags.precision)
+                    }
                 }
-            },
-            FormatHEX => {
-                if flags.alternate && d != 0 {
-                    format!("0X{:01$X}", d, flags.precision)
-                } else {
-                    format!("{:01$X}", d, flags.precision)
+                FormatHEX => {
+                    if flags.alternate && d != 0 {
+                        format!("0X{:01$X}", d, flags.precision)
+                    } else {
+                        format!("{:01$X}", d, flags.precision)
+                    }
                 }
-            },
-            FormatString => return Err(Error::TypeMismatch),
-        }.into_bytes(),
-        Words(s) => match op {
-            FormatString => {
-                let mut s = s.into_bytes();
-                if flags.precision > 0 && flags.precision < s.len() {
-                    s.truncate(flags.precision);
+                FormatString => return Err(Error::TypeMismatch),
+            }
+            .into_bytes()
+        }
+        Words(s) => {
+            match op {
+                FormatString => {
+                    let mut s = s.into_bytes();
+                    if flags.precision > 0 && flags.precision < s.len() {
+                        s.truncate(flags.precision);
+                    }
+                    s
                 }
-                s
-            },
-            _ => return Err(Error::TypeMismatch),
+                _ => return Err(Error::TypeMismatch),
+            }
         }
     };
     if flags.width > s.len() {
@@ -551,7 +598,8 @@ mod test {
     fn test_op_i() {
         let mut vars = Variables::new();
         assert_eq!(expand(b"%p1%d%p2%d%p3%d%i%p1%d%p2%d%p3%d",
-                          &[Number(1),Number(2),Number(3)], &mut vars),
+                          &[Number(1), Number(2), Number(3)],
+                          &mut vars),
                    Ok("123233".bytes().collect::<Vec<_>>()));
         assert_eq!(expand(b"%p1%d%p2%d%i%p1%d%p2%d", &[], &mut vars),
                    Ok("0011".bytes().collect::<Vec<_>>()));
@@ -561,9 +609,11 @@ mod test {
     fn test_param_stack_failure_conditions() {
         let mut varstruct = Variables::new();
         let vars = &mut varstruct;
-        fn get_res(fmt: &str, cap: &str, params: &[Param], vars: &mut Variables) ->
-            Result<Vec<u8>, super::Error>
-        {
+        fn get_res(fmt: &str,
+                   cap: &str,
+                   params: &[Param],
+                   vars: &mut Variables)
+                   -> Result<Vec<u8>, super::Error> {
             let mut u8v: Vec<_> = fmt.bytes().collect();
             u8v.extend(cap.as_bytes().iter().map(|&b| b));
             expand(&u8v, params, vars)
@@ -573,7 +623,8 @@ mod test {
         for &cap in caps.iter() {
             let res = get_res("", cap, &[], vars);
             assert!(res.is_err(),
-                    "Op {} succeeded incorrectly with 0 stack entries", cap);
+                    "Op {} succeeded incorrectly with 0 stack entries",
+                    cap);
             let p = if cap == "%s" || cap == "%l" {
                 Words("foo".to_string())
             } else {
@@ -581,19 +632,25 @@ mod test {
             };
             let res = get_res("%p1", cap, &[p], vars);
             assert!(res.is_ok(),
-                    "Op {} failed with 1 stack entry: {}", cap, res.err().unwrap());
+                    "Op {} failed with 1 stack entry: {}",
+                    cap,
+                    res.err().unwrap());
         }
         let caps = ["%+", "%-", "%*", "%/", "%m", "%&", "%|", "%A", "%O"];
         for &cap in caps.iter() {
             let res = expand(cap.as_bytes(), &[], vars);
             assert!(res.is_err(),
-                    "Binop {} succeeded incorrectly with 0 stack entries", cap);
+                    "Binop {} succeeded incorrectly with 0 stack entries",
+                    cap);
             let res = get_res("%{1}", cap, &[], vars);
             assert!(res.is_err(),
-                    "Binop {} succeeded incorrectly with 1 stack entry", cap);
+                    "Binop {} succeeded incorrectly with 1 stack entry",
+                    cap);
             let res = get_res("%{1}%{2}", cap, &[], vars);
             assert!(res.is_ok(),
-                    "Binop {} failed with 2 stack entries: {}", cap, res.err().unwrap());
+                    "Binop {} failed with 2 stack entries: {}",
+                    cap,
+                    res.err().unwrap());
         }
     }
 
@@ -609,15 +666,15 @@ mod test {
             let s = format!("%{{1}}%{{2}}%{}%d", op);
             let res = expand(s.as_bytes(), &[], &mut Variables::new());
             assert!(res.is_ok(), res.err().unwrap());
-            assert_eq!(res.unwrap(), vec!(b'0' + bs[0]));
+            assert_eq!(res.unwrap(), vec![b'0' + bs[0]]);
             let s = format!("%{{1}}%{{1}}%{}%d", op);
             let res = expand(s.as_bytes(), &[], &mut Variables::new());
             assert!(res.is_ok(), res.err().unwrap());
-            assert_eq!(res.unwrap(), vec!(b'0' + bs[1]));
+            assert_eq!(res.unwrap(), vec![b'0' + bs[1]]);
             let s = format!("%{{2}}%{{1}}%{}%d", op);
             let res = expand(s.as_bytes(), &[], &mut Variables::new());
             assert!(res.is_ok(), res.err().unwrap());
-            assert_eq!(res.unwrap(), vec!(b'0' + bs[2]));
+            assert_eq!(res.unwrap(), vec![b'0' + bs[2]]);
         }
     }
 
@@ -627,16 +684,13 @@ mod test {
         let s = b"\\E[%?%p1%{8}%<%t3%p1%d%e%p1%{16}%<%t9%p1%{8}%-%d%e38;5;%p1%d%;m";
         let res = expand(s, &[Number(1)], &mut vars);
         assert!(res.is_ok(), res.err().unwrap());
-        assert_eq!(res.unwrap(),
-                   "\\E[31m".bytes().collect::<Vec<_>>());
+        assert_eq!(res.unwrap(), "\\E[31m".bytes().collect::<Vec<_>>());
         let res = expand(s, &[Number(8)], &mut vars);
         assert!(res.is_ok(), res.err().unwrap());
-        assert_eq!(res.unwrap(),
-                   "\\E[90m".bytes().collect::<Vec<_>>());
+        assert_eq!(res.unwrap(), "\\E[90m".bytes().collect::<Vec<_>>());
         let res = expand(s, &[Number(42)], &mut vars);
         assert!(res.is_ok(), res.err().unwrap());
-        assert_eq!(res.unwrap(),
-                   "\\E[38;5;42m".bytes().collect::<Vec<_>>());
+        assert_eq!(res.unwrap(), "\\E[38;5;42m".bytes().collect::<Vec<_>>());
     }
 
     #[test]
@@ -647,14 +701,17 @@ mod test {
                           &[Words("foo".to_string()),
                             Words("foo".to_string()),
                             Words("f".to_string()),
-                            Words("foo".to_string())], vars),
+                            Words("foo".to_string())],
+                          vars),
                    Ok("foofoo ffo".bytes().collect::<Vec<_>>()));
         assert_eq!(expand(b"%p1%:-4.2s", &[Words("foo".to_string())], vars),
                    Ok("fo  ".bytes().collect::<Vec<_>>()));
 
         assert_eq!(expand(b"%p1%d%p1%.3d%p1%5d%p1%:+d", &[Number(1)], vars),
                    Ok("1001    1+1".bytes().collect::<Vec<_>>()));
-        assert_eq!(expand(b"%p1%o%p1%#o%p2%6.4x%p2%#6.4X", &[Number(15), Number(27)], vars),
+        assert_eq!(expand(b"%p1%o%p1%#o%p2%6.4x%p2%#6.4X",
+                          &[Number(15), Number(27)],
+                          vars),
                    Ok("17017  001b0X001B".bytes().collect::<Vec<_>>()));
     }
 }

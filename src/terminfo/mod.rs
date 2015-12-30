@@ -32,13 +32,13 @@ use self::Error::*;
 #[derive(Debug)]
 pub struct TermInfo {
     /// Names for the terminal
-    pub names: Vec<String> ,
+    pub names: Vec<String>,
     /// Map of capability name to boolean value
     pub bools: HashMap<String, bool>,
     /// Map of capability name to numeric value
     pub numbers: HashMap<String, u16>,
     /// Map of capability name to raw (unexpanded) string
-    pub strings: HashMap<String, Vec<u8> >
+    pub strings: HashMap<String, Vec<u8>>,
 }
 
 impl TermInfo {
@@ -59,11 +59,9 @@ impl TermInfo {
 
     /// Create a TermInfo for the named terminal.
     pub fn from_name(name: &str) -> Result<TermInfo> {
-        get_dbpath_for_term(name).ok_or_else(|| {
-            ::Error::TerminfoEntryNotFound
-        }).and_then(|p| {
-            TermInfo::from_path(&p)
-        })
+        get_dbpath_for_term(name)
+            .ok_or_else(|| ::Error::TerminfoEntryNotFound)
+            .and_then(|p| TermInfo::from_path(&p))
     }
 
     /// Parse the given TermInfo.
@@ -71,11 +69,13 @@ impl TermInfo {
         Self::_from_path(path.as_ref())
     }
     // Keep the metadata small
-    // (That is, this uses a &Path so that this function need not be instantiated for every type
-    // which implements AsRef<Path>. One day, if/when rustc is a bit smarter, it might do this for
+    // (That is, this uses a &Path so that this function need not be instantiated
+    // for every type
+    // which implements AsRef<Path>. One day, if/when rustc is a bit smarter, it
+    // might do this for
     // us. Alas. )
     fn _from_path(path: &Path) -> Result<TermInfo> {
-        let file = try!(File::open(path).map_err(|e| { ::Error::Io(e) }));
+        let file = try!(File::open(path).map_err(|e| ::Error::Io(e)));
         let mut reader = BufReader::new(file);
         parse(&mut reader, false)
     }
@@ -108,7 +108,6 @@ pub enum Error {
     NamesMissingNull,
     /// The strings table was missing a trailing null terminator.
     StringsMissingNull,
-
 }
 
 impl ::std::fmt::Display for Error {
@@ -117,7 +116,7 @@ impl ::std::fmt::Display for Error {
         match self {
             &NotUtf8(e) => write!(f, "{}", e),
             &BadMagic(v) => write!(f, "bad magic number {:x} in terminfo header", v),
-            _ => f.write_str(self.description())
+            _ => f.write_str(self.description()),
         }
     }
 }
@@ -146,7 +145,7 @@ impl ::std::error::Error for Error {
     fn cause(&self) -> Option<&::std::error::Error> {
         match self {
             &NotUtf8(ref e) => Some(e),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -163,19 +162,19 @@ pub mod parm;
 
 fn cap_for_attr(attr: Attr) -> &'static str {
     match attr {
-        Attr::Bold               => "bold",
-        Attr::Dim                => "dim",
-        Attr::Italic(true)       => "sitm",
-        Attr::Italic(false)      => "ritm",
-        Attr::Underline(true)    => "smul",
-        Attr::Underline(false)   => "rmul",
-        Attr::Blink              => "blink",
-        Attr::Standout(true)     => "smso",
-        Attr::Standout(false)    => "rmso",
-        Attr::Reverse            => "rev",
-        Attr::Secure             => "invis",
+        Attr::Bold => "bold",
+        Attr::Dim => "dim",
+        Attr::Italic(true) => "sitm",
+        Attr::Italic(false) => "ritm",
+        Attr::Underline(true) => "smul",
+        Attr::Underline(false) => "rmul",
+        Attr::Blink => "blink",
+        Attr::Standout(true) => "smso",
+        Attr::Standout(false) => "rmso",
+        Attr::Reverse => "rev",
+        Attr::Secure => "invis",
         Attr::ForegroundColor(_) => "setaf",
-        Attr::BackgroundColor(_) => "setab"
+        Attr::BackgroundColor(_) => "setab",
     }
 }
 
@@ -187,7 +186,7 @@ pub struct TerminfoTerminal<T> {
     ti: TermInfo,
 }
 
-impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
+impl<T: Write + Send> Terminal for TerminfoTerminal<T> {
     type Output = T;
     fn fg(&mut self, color: color::Color) -> Result<()> {
         let color = self.dim_if_necessary(color);
@@ -215,9 +214,7 @@ impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
 
     fn supports_attr(&self, attr: Attr) -> bool {
         match attr {
-            Attr::ForegroundColor(_) | Attr::BackgroundColor(_) => {
-                self.num_colors > 0
-            }
+            Attr::ForegroundColor(_) | Attr::BackgroundColor(_) => self.num_colors > 0,
             _ => {
                 let cap = cap_for_attr(attr);
                 self.ti.strings.get(cap).is_some()
@@ -228,15 +225,16 @@ impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
     fn reset(&mut self) -> Result<()> {
         // are there any terminals that have color/attrs and not sg0?
         // Try falling back to sgr, then op
-        let cmd = match [
-            "sg0", "sgr", "op"
-        ].iter().filter_map(|cap| {
-            self.ti.strings.get(*cap)
-        }).next() {
-            Some(op) => match expand(&op, &[], &mut Variables::new()) {
-                Ok(cmd) => cmd,
-                Err(e) => return Err(e.into()),
-            },
+        let cmd = match ["sg0", "sgr", "op"]
+                            .iter()
+                            .filter_map(|cap| self.ti.strings.get(*cap))
+                            .next() {
+            Some(op) => {
+                match expand(&op, &[], &mut Variables::new()) {
+                    Ok(cmd) => cmd,
+                    Err(e) => return Err(e.into()),
+                }
+            }
             None => return Err(::Error::NotSupported),
         };
         try!(self.out.write_all(&cmd));
@@ -255,20 +253,30 @@ impl<T: Write+Send> Terminal for TerminfoTerminal<T> {
         self.apply_cap("cr", &[])
     }
 
-    fn get_ref<'a>(&'a self) -> &'a T { &self.out }
+    fn get_ref<'a>(&'a self) -> &'a T {
+        &self.out
+    }
 
-    fn get_mut<'a>(&'a mut self) -> &'a mut T { &mut self.out }
+    fn get_mut<'a>(&'a mut self) -> &'a mut T {
+        &mut self.out
+    }
 
-    fn into_inner(self) -> T where Self: Sized { self.out }
+    fn into_inner(self) -> T
+        where Self: Sized
+    {
+        self.out
+    }
 }
 
-impl<T: Write+Send> TerminfoTerminal<T> {
+impl<T: Write + Send> TerminfoTerminal<T> {
     /// Create a new TerminfoTerminal with the given TermInfo and Write.
     pub fn new_with_terminfo(out: T, terminfo: TermInfo) -> TerminfoTerminal<T> {
-        let nc = if terminfo.strings.contains_key("setaf")
-                 && terminfo.strings.contains_key("setab") {
-                     terminfo.numbers.get("colors").map_or(0, |&n| n)
-                 } else { 0 };
+        let nc = if terminfo.strings.contains_key("setaf") &&
+                    terminfo.strings.contains_key("setab") {
+            terminfo.numbers.get("colors").map_or(0, |&n| n)
+        } else {
+            0
+        };
 
         TerminfoTerminal {
             out: out,
@@ -294,11 +302,16 @@ impl<T: Write+Send> TerminfoTerminal<T> {
 
     fn apply_cap(&mut self, cmd: &str, params: &[Param]) -> Result<()> {
         match self.ti.strings.get(cmd) {
-            Some(cmd) => match expand(&cmd, params, &mut Variables::new()) {
-                Ok(s) => { try!(self.out.write_all(&s)); Ok(()) }
-                Err(e) => Err(e.into()),
-            },
-            None => Err(::Error::NotSupported)
+            Some(cmd) => {
+                match expand(&cmd, params, &mut Variables::new()) {
+                    Ok(s) => {
+                        try!(self.out.write_all(&s));
+                        Ok(())
+                    }
+                    Err(e) => Err(e.into()),
+                }
+            }
+            None => Err(::Error::NotSupported),
         }
     }
 }
