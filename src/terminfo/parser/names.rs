@@ -1,4 +1,5 @@
 #![allow(non_upper_case_globals, missing_docs)]
+#![cfg_attr(rustfmt, rustfmt_skip)]
 
 pub static boolfnames: &'static [&'static str] = &[
     "auto_left_margin", "auto_right_margin", "no_esc_ctlc", "ceol_standout_glitch",
