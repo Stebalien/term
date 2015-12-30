@@ -156,6 +156,7 @@ pub mod searcher;
 pub mod parser {
     //! ncurses-compatible compiled terminfo format parsing (term(5))
     pub mod compiled;
+    mod names;
 }
 pub mod parm;
 
