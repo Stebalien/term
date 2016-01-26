@@ -57,16 +57,11 @@
 //! [ti]: https://en.wikipedia.org/wiki/Terminfo
 
 #![doc(html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
-       html_favicon_url = "https://www.rust-lang.org/favicon.ico",
-       html_root_url = "https://doc.rust-lang.org/nightly/",
-       html_playground_url = "http://play.rust-lang.org/")]
+       html_favicon_url = "https://doc.rust-lang.org/favicon.ico",
+       html_root_url = "https://stebalien.github.io/doc/term/term/",
+       test(attr(deny(warnings))))]
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
-#![cfg_attr(rust_build, feature(staged_api))]
-#![cfg_attr(rust_build, staged_api)]
-#![cfg_attr(rust_build,
-            unstable(feature = "rustc_private",
-                     reason = "use the crates.io `term` library instead"))]
 
 use std::io::prelude::*;
 
