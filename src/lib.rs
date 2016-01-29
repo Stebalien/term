@@ -295,6 +295,16 @@ impl std::error::Error for Error {
     }
 }
 
+impl From<Error> for io::Error {
+    fn from(err: Error) -> io::Error {
+        let kind = match &err {
+            &Error::Io(ref e) => e.kind(),
+            _ => io::ErrorKind::Other,
+        };
+        io::Error::new(kind, err)
+    }
+}
+
 impl std::convert::From<io::Error> for Error {
     fn from(val: io::Error) -> Self {
         Error::Io(val)
