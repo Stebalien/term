@@ -366,6 +366,15 @@ pub trait Terminal: Write {
     /// calling reset.
     fn reset(&mut self) -> Result<()>;
 
+    /// Returns true if reset is supported.
+    fn supports_reset(&self) -> bool;
+
+    /// Returns true if color is fully supported.
+    ///
+    /// If this function returns `true`, `bg`, `fg`, and `reset` will never
+    /// return `Err(Error::NotSupported)`.
+    fn supports_color(&self) -> bool;
+
     /// Moves the cursor up one line.
     ///
     /// Returns `Ok(())` if the cursor movement code was printed, or `Err(e)` if there was an

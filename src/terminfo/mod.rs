@@ -244,6 +244,14 @@ impl<T: Write + Send> Terminal for TerminfoTerminal<T> {
         Ok(())
     }
 
+    fn supports_reset(&self) -> bool {
+        ["sgr0", "sgr", "op"].iter().any(|&cap| self.ti.strings.get(cap).is_some())
+    }
+
+    fn supports_color(&self) -> bool {
+        self.num_colors > 0 && self.supports_reset()
+    }
+
     fn cursor_up(&mut self) -> Result<()> {
         self.apply_cap("cuu1", &[])
     }

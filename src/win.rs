@@ -195,6 +195,14 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         Ok(())
     }
 
+    fn supports_reset(&self) -> bool {
+        true
+    }
+
+    fn supports_color(&self) -> bool {
+        true
+    }
+
     fn cursor_up(&mut self) -> Result<()> {
         let _unused = self.buf.flush();
         let handle = try!(conout());
