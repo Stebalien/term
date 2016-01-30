@@ -224,14 +224,16 @@ impl<T: Write + Send> Terminal for TerminfoTerminal<T> {
     }
 
     fn reset(&mut self) -> Result<()> {
-        // are there any terminals that have color/attrs and not sg0?
+        // are there any terminals that have color/attrs and not sgr0?
         // Try falling back to sgr, then op
-        let cmd = match ["sg0", "sgr", "op"]
+        let cmd = match [("sgr0", &[] as &[Param]),
+                         ("sgr", &[Param::Number(0)]),
+                         ("op", &[])]
                             .iter()
-                            .filter_map(|cap| self.ti.strings.get(*cap))
+                            .filter_map(|&(cap, params)| self.ti.strings.get(cap).map(|c| (c, params)))
                             .next() {
-            Some(op) => {
-                match expand(&op, &[], &mut Variables::new()) {
+            Some((op, params)) => {
+                match expand(op, params, &mut Variables::new()) {
                     Ok(cmd) => cmd,
                     Err(e) => return Err(e.into()),
                 }
