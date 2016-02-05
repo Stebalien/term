@@ -85,17 +85,17 @@ impl ::std::fmt::Display for Error {
 impl ::std::error::Error for Error {
     fn description(&self) -> &str {
         use self::Error::*;
-        match self {
-            &StackUnderflow => "not enough elements on the stack",
-            &TypeMismatch => "type mismatch",
-            &UnrecognizedFormatOption(_) => "unrecognized format option",
-            &InvalidVariableName(_) => "invalid variable name",
-            &InvalidParameterIndex(_) => "invalid parameter index",
-            &MalformedCharacterConstant => "malformed character constant",
-            &IntegerConstantOverflow => "integer constant computation overflowed",
-            &MalformedIntegerConstant => "malformed integer constant",
-            &FormatWidthOverflow => "format width constant computation overflowed",
-            &FormatPrecisionOverflow => "format precision constant computation overflowed",
+        match *self {
+            StackUnderflow => "not enough elements on the stack",
+            TypeMismatch => "type mismatch",
+            UnrecognizedFormatOption(_) => "unrecognized format option",
+            InvalidVariableName(_) => "invalid variable name",
+            InvalidParameterIndex(_) => "invalid parameter index",
+            MalformedCharacterConstant => "malformed character constant",
+            IntegerConstantOverflow => "integer constant computation overflowed",
+            MalformedIntegerConstant => "malformed integer constant",
+            FormatWidthOverflow => "format width constant computation overflowed",
+            FormatPrecisionOverflow => "format precision constant computation overflowed",
         }
     }
 
@@ -259,7 +259,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                         if let Some(arg) = stack.pop() {
                             let flags = Flags::new();
                             let res = try!(format(arg, FormatOp::from_char(cur), flags));
-                            output.extend(res.iter().map(|x| *x));
+                            output.extend(res);
                         } else {
                             return Err(Error::StackUnderflow);
                         }
@@ -365,7 +365,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                     (_, 'd') | (_, 'o') | (_, 'x') | (_, 'X') | (_, 's') => {
                         if let Some(arg) = stack.pop() {
                             let res = try!(format(arg, FormatOp::from_char(cur), *flags));
-                            output.extend(res.iter().map(|x| *x));
+                            output.extend(res);
                             // will cause state to go to Nothing
                             old_state = FormatPattern(*flags, *fstate);
                         } else {
@@ -615,18 +615,18 @@ mod test {
                    vars: &mut Variables)
                    -> Result<Vec<u8>, super::Error> {
             let mut u8v: Vec<_> = fmt.bytes().collect();
-            u8v.extend(cap.as_bytes().iter().map(|&b| b));
+            u8v.extend(cap.as_bytes().iter().cloned());
             expand(&u8v, params, vars)
         }
 
         let caps = ["%d", "%c", "%s", "%Pa", "%l", "%!", "%~"];
-        for &cap in caps.iter() {
+        for &cap in &caps {
             let res = get_res("", cap, &[], vars);
             assert!(res.is_err(),
                     "Op {} succeeded incorrectly with 0 stack entries",
                     cap);
             let p = if cap == "%s" || cap == "%l" {
-                Words("foo".to_string())
+                Words("foo".to_owned())
             } else {
                 Number(97)
             };
@@ -637,7 +637,7 @@ mod test {
                     res.err().unwrap());
         }
         let caps = ["%+", "%-", "%*", "%/", "%m", "%&", "%|", "%A", "%O"];
-        for &cap in caps.iter() {
+        for &cap in &caps {
             let res = expand(cap.as_bytes(), &[], vars);
             assert!(res.is_err(),
                     "Binop {} succeeded incorrectly with 0 stack entries",
@@ -662,7 +662,7 @@ mod test {
     #[test]
     fn test_comparison_ops() {
         let v = [('<', [1u8, 0u8, 0u8]), ('=', [0u8, 1u8, 0u8]), ('>', [0u8, 0u8, 1u8])];
-        for &(op, bs) in v.iter() {
+        for &(op, bs) in &v {
             let s = format!("%{{1}}%{{2}}%{}%d", op);
             let res = expand(s.as_bytes(), &[], &mut Variables::new());
             assert!(res.is_ok(), res.err().unwrap());
@@ -698,13 +698,13 @@ mod test {
         let mut varstruct = Variables::new();
         let vars = &mut varstruct;
         assert_eq!(expand(b"%p1%s%p2%2s%p3%2s%p4%.2s",
-                          &[Words("foo".to_string()),
-                            Words("foo".to_string()),
-                            Words("f".to_string()),
-                            Words("foo".to_string())],
+                          &[Words("foo".to_owned()),
+                            Words("foo".to_owned()),
+                            Words("f".to_owned()),
+                            Words("foo".to_owned())],
                           vars),
                    Ok("foofoo ffo".bytes().collect::<Vec<_>>()));
-        assert_eq!(expand(b"%p1%:-4.2s", &[Words("foo".to_string())], vars),
+        assert_eq!(expand(b"%p1%:-4.2s", &[Words("foo".to_owned())], vars),
                    Ok("fo  ".bytes().collect::<Vec<_>>()));
 
         assert_eq!(expand(b"%p1%d%p1%.3d%p1%5d%p1%:+d", &[Number(1)], vars),

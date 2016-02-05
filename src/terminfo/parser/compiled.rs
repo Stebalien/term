@@ -102,7 +102,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
     };
 
     let term_names: Vec<String> = names_str.split('|')
-                                           .map(|s| s.to_string())
+                                           .map(|s| s.to_owned())
                                            .collect();
     // consume NUL
     if try!(read_byte(file)) != b'\0' {
@@ -112,7 +112,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
     let bools_map: HashMap<String, bool> = try! {
         (0..bools_bytes).filter_map(|i| match read_byte(file) {
             Err(e) => Some(Err(e)),
-            Ok(1) => Some(Ok((bnames[i].to_string(), true))),
+            Ok(1) => Some(Ok((bnames[i].to_owned(), true))),
             Ok(_) => None
         }).collect()
     };
@@ -124,7 +124,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
     let numbers_map: HashMap<String, u16> = try! {
         (0..numbers_count).filter_map(|i| match read_le_u16(file) {
             Ok(0xFFFF) => None,
-            Ok(n) => Some(Ok((nnames[i].to_string(), n))),
+            Ok(n) => Some(Ok((nnames[i].to_owned(), n))),
             Err(e) => Some(Err(e))
         }).collect()
     };
@@ -156,7 +156,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
                                    // undocumented: FFFE indicates cap@, which means the capability
                                    // is not present
                                    // unsure if the handling for this is correct
-                                   return Ok((name.to_string(), Vec::new()));
+                                   return Ok((name.to_owned(), Vec::new()));
                                }
 
                                // Find the offset of the NUL we want to go to
@@ -165,7 +165,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
                                                 .position(|&b| b == 0);
                                match nulpos {
                                    Some(len) => {
-                                       Ok((name.to_string(),
+                                       Ok((name.to_owned(),
                                            string_table[offset..offset + len].to_vec()))
                                    }
                                    None => return Err(::Error::TerminfoParsing(StringsMissingNull)),
@@ -188,16 +188,16 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
 /// Create a dummy TermInfo struct for msys terminals
 pub fn msys_terminfo() -> TermInfo {
     let mut strings = HashMap::new();
-    strings.insert("sgr0".to_string(), b"\x1B[0m".to_vec());
-    strings.insert("bold".to_string(), b"\x1B[1m".to_vec());
-    strings.insert("setaf".to_string(), b"\x1B[3%p1%dm".to_vec());
-    strings.insert("setab".to_string(), b"\x1B[4%p1%dm".to_vec());
+    strings.insert("sgr0".to_owned(), b"\x1B[0m".to_vec());
+    strings.insert("bold".to_owned(), b"\x1B[1m".to_vec());
+    strings.insert("setaf".to_owned(), b"\x1B[3%p1%dm".to_vec());
+    strings.insert("setab".to_owned(), b"\x1B[4%p1%dm".to_vec());
 
     let mut numbers = HashMap::new();
-    numbers.insert("colors".to_string(), 8u16);
+    numbers.insert("colors".to_owned(), 8u16);
 
     TermInfo {
-        names: vec!["cygwin".to_string()], // msys is a fork of an older cygwin version
+        names: vec!["cygwin".to_owned()], // msys is a fork of an older cygwin version
         bools: HashMap::new(),
         numbers: numbers,
         strings: strings,
