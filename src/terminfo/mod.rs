@@ -29,7 +29,7 @@ use self::Error::*;
 
 
 /// A parsed terminfo database entry.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TermInfo {
     /// Names for the terminal
     pub names: Vec<String>,
@@ -181,6 +181,7 @@ fn cap_for_attr(attr: Attr) -> &'static str {
 
 /// A Terminal that knows how many colors it supports, with a reference to its
 /// parsed Terminfo database record.
+#[derive(Clone, Debug)]
 pub struct TerminfoTerminal<T> {
     num_colors: u16,
     out: T,
