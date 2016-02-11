@@ -227,11 +227,11 @@ impl<T: Write + Send> Terminal for TerminfoTerminal<T> {
     fn reset(&mut self) -> Result<()> {
         // are there any terminals that have color/attrs and not sgr0?
         // Try falling back to sgr, then op
-        let cmd = match [("sgr0", &[] as &[Param]),
-                         ("sgr", &[Param::Number(0)]),
-                         ("op", &[])]
+        let cmd = match [("sgr0", &[] as &[Param]), ("sgr", &[Param::Number(0)]), ("op", &[])]
                             .iter()
-                            .filter_map(|&(cap, params)| self.ti.strings.get(cap).map(|c| (c, params)))
+                            .filter_map(|&(cap, params)| {
+                                self.ti.strings.get(cap).map(|c| (c, params))
+                            })
                             .next() {
             Some((op, params)) => {
                 match expand(op, params, &mut Variables::new()) {
