@@ -34,11 +34,11 @@ pub struct TermInfo {
     /// Names for the terminal
     pub names: Vec<String>,
     /// Map of capability name to boolean value
-    pub bools: HashMap<String, bool>,
+    pub bools: HashMap<&'static str, bool>,
     /// Map of capability name to numeric value
-    pub numbers: HashMap<String, u16>,
+    pub numbers: HashMap<&'static str, u16>,
     /// Map of capability name to raw (unexpanded) string
-    pub strings: HashMap<String, Vec<u8>>,
+    pub strings: HashMap<&'static str, Vec<u8>>,
 }
 
 impl TermInfo {
