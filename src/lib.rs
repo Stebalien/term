@@ -274,7 +274,6 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {
     fn description(&self) -> &str {
         use Error::*;
-        use std::error::Error;
         match *self {
             Io(ref io) => io.description(),
             TerminfoParsing(ref e) => e.description(),
