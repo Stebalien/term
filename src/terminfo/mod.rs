@@ -79,6 +79,45 @@ impl TermInfo {
         let mut reader = BufReader::new(file);
         parse(&mut reader, false)
     }
+
+    /// Retrieve a capability `cmd` and expand it with `params`, writing result to `out`.
+    pub fn apply_cap(&self, cmd: &str, params: &[Param], out: &mut io::Write) -> Result<()> {
+        match self.strings.get(cmd) {
+            Some(cmd) => {
+                match expand(&cmd, params, &mut Variables::new()) {
+                    Ok(s) => {
+                        try!(out.write_all(&s));
+                        Ok(())
+                    }
+                    Err(e) => Err(e.into()),
+                }
+            }
+            None => Err(::Error::NotSupported),
+        }
+    }
+
+    /// Write the reset string to `out`.
+    pub fn reset(&self, out: &mut io::Write) -> Result<()> {
+        // are there any terminals that have color/attrs and not sgr0?
+        // Try falling back to sgr, then op
+        let cmd = match [("sgr0", &[] as &[Param]), ("sgr", &[Param::Number(0)]), ("op", &[])]
+                            .iter()
+                            .filter_map(|&(cap, params)| {
+                                self.strings.get(cap).map(|c| (c, params))
+                            })
+                            .next() {
+            Some((op, params)) => {
+                match expand(op, params, &mut Variables::new()) {
+                    Ok(cmd) => cmd,
+                    Err(e) => return Err(e.into()),
+                }
+            }
+            None => return Err(::Error::NotSupported),
+        };
+        try!(out.write_all(&cmd));
+        Ok(())
+    }
+
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -193,7 +232,7 @@ impl<T: Write + Send> Terminal for TerminfoTerminal<T> {
     fn fg(&mut self, color: color::Color) -> Result<()> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
-            return self.apply_cap("setaf", &[Param::Number(color as i32)]);
+            return self.ti.apply_cap("setaf", &[Param::Number(color as i32)], &mut self.out);
         }
         Err(::Error::ColorOutOfRange)
     }
@@ -201,7 +240,7 @@ impl<T: Write + Send> Terminal for TerminfoTerminal<T> {
     fn bg(&mut self, color: color::Color) -> Result<()> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
-            return self.apply_cap("setab", &[Param::Number(color as i32)]);
+            return self.ti.apply_cap("setab", &[Param::Number(color as i32)], &mut self.out);
         }
         Err(::Error::ColorOutOfRange)
     }
@@ -210,7 +249,7 @@ impl<T: Write + Send> Terminal for TerminfoTerminal<T> {
         match attr {
             Attr::ForegroundColor(c) => self.fg(c),
             Attr::BackgroundColor(c) => self.bg(c),
-            _ => self.apply_cap(cap_for_attr(attr), &[]),
+            _ => self.ti.apply_cap(cap_for_attr(attr), &[], &mut self.out),
         }
     }
 
@@ -225,24 +264,7 @@ impl<T: Write + Send> Terminal for TerminfoTerminal<T> {
     }
 
     fn reset(&mut self) -> Result<()> {
-        // are there any terminals that have color/attrs and not sgr0?
-        // Try falling back to sgr, then op
-        let cmd = match [("sgr0", &[] as &[Param]), ("sgr", &[Param::Number(0)]), ("op", &[])]
-                            .iter()
-                            .filter_map(|&(cap, params)| {
-                                self.ti.strings.get(cap).map(|c| (c, params))
-                            })
-                            .next() {
-            Some((op, params)) => {
-                match expand(op, params, &mut Variables::new()) {
-                    Ok(cmd) => cmd,
-                    Err(e) => return Err(e.into()),
-                }
-            }
-            None => return Err(::Error::NotSupported),
-        };
-        try!(self.out.write_all(&cmd));
-        Ok(())
+        self.ti.reset(&mut self.out)
     }
 
     fn supports_reset(&self) -> bool {
@@ -254,15 +276,15 @@ impl<T: Write + Send> Terminal for TerminfoTerminal<T> {
     }
 
     fn cursor_up(&mut self) -> Result<()> {
-        self.apply_cap("cuu1", &[])
+        self.ti.apply_cap("cuu1", &[], &mut self.out)
     }
 
     fn delete_line(&mut self) -> Result<()> {
-        self.apply_cap("dl", &[])
+        self.ti.apply_cap("dl", &[], &mut self.out)
     }
 
     fn carriage_return(&mut self) -> Result<()> {
-        self.apply_cap("cr", &[])
+        self.ti.apply_cap("cr", &[], &mut self.out)
     }
 
     fn get_ref(&self) -> &T {
@@ -309,21 +331,6 @@ impl<T: Write + Send> TerminfoTerminal<T> {
             color - 8
         } else {
             color
-        }
-    }
-
-    fn apply_cap(&mut self, cmd: &str, params: &[Param]) -> Result<()> {
-        match self.ti.strings.get(cmd) {
-            Some(cmd) => {
-                match expand(&cmd, params, &mut Variables::new()) {
-                    Ok(s) => {
-                        try!(self.out.write_all(&s));
-                        Ok(())
-                    }
-                    Err(e) => Err(e.into()),
-                }
-            }
-            None => Err(::Error::NotSupported),
         }
     }
 }
