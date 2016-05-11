@@ -62,9 +62,6 @@
        test(attr(deny(warnings))))]
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
-#![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", plugin(clippy))]
-#![cfg_attr(feature="clippy", allow(cyclomatic_complexity))]
 
 use std::io::prelude::*;
 

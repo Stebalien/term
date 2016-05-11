@@ -42,7 +42,7 @@ pub struct TermInfo {
 }
 
 impl TermInfo {
-    /// Create a TermInfo based on current environment.
+    /// Create a `TermInfo` based on current environment.
     pub fn from_env() -> Result<TermInfo> {
         let term = match env::var("TERM") {
             Ok(name) => TermInfo::from_name(&name),
@@ -57,14 +57,14 @@ impl TermInfo {
         }
     }
 
-    /// Create a TermInfo for the named terminal.
+    /// Create a `TermInfo` for the named terminal.
     pub fn from_name(name: &str) -> Result<TermInfo> {
         get_dbpath_for_term(name)
             .ok_or_else(|| ::Error::TerminfoEntryNotFound)
             .and_then(|p| TermInfo::from_path(&p))
     }
 
-    /// Parse the given TermInfo.
+    /// Parse the given `TermInfo`.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<TermInfo> {
         Self::_from_path(path.as_ref())
     }
@@ -84,7 +84,7 @@ impl TermInfo {
     pub fn apply_cap(&self, cmd: &str, params: &[Param], out: &mut io::Write) -> Result<()> {
         match self.strings.get(cmd) {
             Some(cmd) => {
-                match expand(&cmd, params, &mut Variables::new()) {
+                match expand(cmd, params, &mut Variables::new()) {
                     Ok(s) => {
                         try!(out.write_all(&s));
                         Ok(())
@@ -191,7 +191,7 @@ impl ::std::error::Error for Error {
 
 pub mod searcher;
 
-/// TermInfo format parsing.
+/// `TermInfo` format parsing.
 pub mod parser {
     //! ncurses-compatible compiled terminfo format parsing (term(5))
     pub mod compiled;

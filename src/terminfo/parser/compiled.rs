@@ -185,7 +185,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
     })
 }
 
-/// Create a dummy TermInfo struct for msys terminals
+/// Create a dummy `TermInfo` struct for msys terminals
 pub fn msys_terminfo() -> TermInfo {
     let mut strings = HashMap::new();
     strings.insert("sgr0", b"\x1B[0m".to_vec());
