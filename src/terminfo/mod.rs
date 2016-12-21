@@ -280,7 +280,7 @@ impl<T: Write + Send> Terminal for TerminfoTerminal<T> {
     }
 
     fn delete_line(&mut self) -> Result<()> {
-        self.ti.apply_cap("dl", &[], &mut self.out)
+        self.ti.apply_cap("clr_eol", &[], &mut self.out)
     }
 
     fn carriage_return(&mut self) -> Result<()> {
