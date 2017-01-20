@@ -11,6 +11,7 @@ documentation = "https://stebalien.github.io/doc/term/term/"
 description = """
 A terminal formatting library
 """
+categories = ["command-line-interface"]
 
 [target.'cfg(windows)'.dependencies]
 winapi = "0.2"
