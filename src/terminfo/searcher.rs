@@ -42,7 +42,7 @@ pub fn get_dbpath_for_term(term: &str) -> Option<PathBuf> {
         dirs_to_search.push(PathBuf::from(dir));
     }
 
-    if let Ok(dirs) = match env::var("TERMINFO_DIRS") {
+    if let Ok(dirs) = env::var("TERMINFO_DIRS") {
         for i in dirs.split(':') {
             if i == "" {
                 dirs_to_search.push(PathBuf::from("/usr/share/terminfo"));
