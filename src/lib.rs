@@ -24,7 +24,7 @@
 //! ```toml
 //! [dependencies]
 //!
-//! term = "0.2"
+//! term = "0.4.5"
 //! ```
 //!
 //! and this to your crate root:
