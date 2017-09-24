@@ -1,0 +1,30 @@
+extern crate libc;
+
+use std::os::unix::io::RawFd;
+use std::mem;
+use Dims;
+
+/// Get the window size from a file descriptor (0 for stdout)
+///
+/// Option is returned as there is no distinction between errors (all ENOSYS)
+pub fn win_size(fd: RawFd) -> Option<libc::winsize> {
+    unsafe {
+        let ws: libc::winsize = mem::uninitialized();
+        if libc::ioctl(fd, libc::TIOCGWINSZ, &ws) == 0 {
+            Some(ws)
+        } else {
+            None
+        }
+    }
+}
+
+impl From<libc::winsize> for Dims {
+    fn from(sz: libc::winsize) -> Dims {
+        Dims {
+            rows: sz.ws_row as u16,
+            columns: sz.ws_col as u16,
+            pixel_width: Some(sz.ws_xpixel as u32),
+            pixel_height: Some(sz.ws_ypixel as u32),
+        }
+    }
+}

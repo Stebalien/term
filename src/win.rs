@@ -24,6 +24,7 @@ use Error;
 use Result;
 use Terminal;
 use color;
+use Dims;
 
 /// A Terminal implementation which uses the Win32 Console API.
 pub struct WinConsole<T> {
@@ -283,6 +284,10 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
                 Err(io::Error::last_os_error().into())
             }
         }
+    }
+
+    fn dims(&self) -> Result<Dims> {
+        Err(::Error::NotSupported)
     }
 
     fn get_ref<'a>(&'a self) -> &'a T {

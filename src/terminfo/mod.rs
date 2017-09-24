@@ -19,6 +19,7 @@ use std::io::BufReader;
 use std::path::Path;
 
 use Attr;
+use Dims;
 use color;
 use Terminal;
 use Result;
@@ -26,6 +27,11 @@ use self::searcher::get_dbpath_for_term;
 use self::parser::compiled::parse;
 use self::parm::{expand, Variables, Param};
 use self::Error::*;
+
+#[cfg(unix)]
+use std::os::unix::io::AsRawFd;
+#[cfg(unix)]
+use unix::win_size;
 
 
 /// Returns true if the named terminal supports basic ANSI escape codes.
@@ -283,6 +289,87 @@ pub struct TerminfoTerminal<T> {
     ti: TermInfo,
 }
 
+#[cfg(unix)]
+impl<T: Write + AsRawFd> Terminal for TerminfoTerminal<T> {
+    type Output = T;
+    fn fg(&mut self, color: color::Color) -> Result<()> {
+        let color = self.dim_if_necessary(color);
+        if self.num_colors > color {
+            return self.ti.apply_cap("setaf", &[Param::Number(color as i32)], &mut self.out);
+        }
+        Err(::Error::ColorOutOfRange)
+    }
+
+    fn bg(&mut self, color: color::Color) -> Result<()> {
+        let color = self.dim_if_necessary(color);
+        if self.num_colors > color {
+            return self.ti.apply_cap("setab", &[Param::Number(color as i32)], &mut self.out);
+        }
+        Err(::Error::ColorOutOfRange)
+    }
+
+    fn attr(&mut self, attr: Attr) -> Result<()> {
+        match attr {
+            Attr::ForegroundColor(c) => self.fg(c),
+            Attr::BackgroundColor(c) => self.bg(c),
+            _ => self.ti.apply_cap(cap_for_attr(attr), &[], &mut self.out),
+        }
+    }
+
+    fn supports_attr(&self, attr: Attr) -> bool {
+        match attr {
+            Attr::ForegroundColor(_) | Attr::BackgroundColor(_) => self.num_colors > 0,
+            _ => {
+                let cap = cap_for_attr(attr);
+                self.ti.strings.get(cap).is_some()
+            }
+        }
+    }
+
+    fn reset(&mut self) -> Result<()> {
+        self.ti.reset(&mut self.out)
+    }
+
+    fn supports_reset(&self) -> bool {
+        ["sgr0", "sgr", "op"].iter().any(|&cap| self.ti.strings.get(cap).is_some())
+    }
+
+    fn supports_color(&self) -> bool {
+        self.num_colors > 0 && self.supports_reset()
+    }
+
+    fn cursor_up(&mut self) -> Result<()> {
+        self.ti.apply_cap("cuu1", &[], &mut self.out)
+    }
+
+    fn delete_line(&mut self) -> Result<()> {
+        self.ti.apply_cap("el", &[], &mut self.out)
+    }
+
+    fn carriage_return(&mut self) -> Result<()> {
+        self.ti.apply_cap("cr", &[], &mut self.out)
+    }
+
+    fn dims(&self) -> Result<Dims> {
+        win_size(self.out.as_raw_fd()).map(|s| s.into()).ok_or(::Error::NotSupported)
+    }
+
+    fn get_ref(&self) -> &T {
+        &self.out
+    }
+
+    fn get_mut(&mut self) -> &mut T {
+        &mut self.out
+    }
+
+    fn into_inner(self) -> T
+        where Self: Sized
+    {
+        self.out
+    }
+}
+
+#[cfg(windows)]
 impl<T: Write> Terminal for TerminfoTerminal<T> {
     type Output = T;
     fn fg(&mut self, color: color::Color) -> Result<()> {
@@ -341,6 +428,10 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
 
     fn carriage_return(&mut self) -> Result<()> {
         self.ti.apply_cap("cr", &[], &mut self.out)
+    }
+
+    fn dims(&self) -> Result<Dims> {
+        Err(::Error::NotSupported)
     }
 
     fn get_ref(&self) -> &T {
