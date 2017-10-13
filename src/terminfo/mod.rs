@@ -351,7 +351,7 @@ impl<T: Write + AsRawFd> Terminal for TerminfoTerminal<T> {
     }
 
     fn dims(&self) -> Result<Dims> {
-        win_size(self.out.as_raw_fd()).map(|s| s.into()).ok_or(::Error::NotSupported)
+        win_size(self.out.as_raw_fd()).map(|s| s.into())
     }
 
     fn get_ref(&self) -> &T {

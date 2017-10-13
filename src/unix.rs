@@ -3,17 +3,18 @@ extern crate libc;
 use std::os::unix::io::RawFd;
 use std::mem;
 use Dims;
+use Result;
 
 /// Get the window size from a file descriptor (0 for stdout)
 ///
 /// Option is returned as there is no distinction between errors (all ENOSYS)
-pub fn win_size(fd: RawFd) -> Option<libc::winsize> {
+pub fn win_size(fd: RawFd) -> Result<libc::winsize> {
     unsafe {
         let ws: libc::winsize = mem::uninitialized();
         if libc::ioctl(fd, libc::TIOCGWINSZ, &ws) == 0 {
-            Some(ws)
+            Ok(ws)
         } else {
-            None
+            Err(io::Error::last_os_error().into())
         }
     }
 }
