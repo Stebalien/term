@@ -1,6 +1,7 @@
 extern crate libc;
 
 use std::os::unix::io::RawFd;
+use std::io;
 use std::mem;
 use Dims;
 use Result;
