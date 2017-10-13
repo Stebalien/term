@@ -173,7 +173,7 @@ pub enum Attr {
 
 /// A struct representing the number of columns and rows of the terminal, and, if available, the
 /// width and height of the terminal in pixels
-#[derive(Debug, PartialEq, Hash, Eq, Copy, Clone)]
+#[derive(Debug, PartialEq, Hash, Eq, Copy, Clone, Default)]
 pub struct Dims {
     /// The number of rows in the terminal
     pub rows: u16,

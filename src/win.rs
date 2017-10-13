@@ -287,7 +287,19 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
     }
 
     fn dims(&self) -> Result<Dims> {
-        Err(::Error::NotSupported)
+        let handle = try!(conout());
+        unsafe {
+            let mut buffer_info = ::std::mem::uninitialized();
+            if kernel32::GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
+                Ok(Dims {
+                    rows: (buffer_info.srWindow.Bottom - buffer_info.srWindow.Top + 1) as u16,
+                    columns: (buffer_info.srWindow.Right - buffer_info.srWindow.Left + 1) as u16,
+                    ..Default::default()
+                })
+            } else {
+                Err(io::Error::last_os_error().into())
+            }
+        }
     }
 
     fn get_ref<'a>(&'a self) -> &'a T {
