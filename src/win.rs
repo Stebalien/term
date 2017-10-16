@@ -246,7 +246,8 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
             let size = buffer_info.dwSize;
             let num = (size.X - pos.X) as winapi::DWORD;
             let mut written = 0;
-            if kernel32::FillConsoleOutputCharacterW(handle, 0, num, pos, &mut written) == 0 {
+            // 0x0020u16 is ' ' (space) in UTF-16 (same as ascii)
+            if kernel32::FillConsoleOutputCharacterW(handle, 0x0020, num, pos, &mut written) == 0 {
                 return Err(io::Error::last_os_error().into());
             }
             if kernel32::FillConsoleOutputAttribute(handle, 0, num, pos, &mut written) == 0 {
