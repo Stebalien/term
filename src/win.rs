@@ -12,18 +12,24 @@
 
 // FIXME (#13400): this is only a tiny fraction of the Windows console api
 
-extern crate kernel32;
 extern crate winapi;
 
 use std::io::prelude::*;
 use std::io;
 use std::ptr;
-
 use Attr;
 use Error;
 use Result;
 use Terminal;
 use color;
+
+use win::winapi::um::wincon::{SetConsoleTextAttribute, SetConsoleCursorPosition};
+use win::winapi::um::wincon::{GetConsoleScreenBufferInfo, FillConsoleOutputCharacterW, COORD};
+use win::winapi::um::wincon::FillConsoleOutputAttribute;
+use win::winapi::shared::minwindef::{DWORD, WORD};
+use win::winapi::um::handleapi::INVALID_HANDLE_VALUE;
+use win::winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
+use win::winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE, HANDLE};
 
 /// A Terminal implementation which uses the Win32 Console API.
 pub struct WinConsole<T> {
@@ -73,18 +79,18 @@ fn bits_to_color(bits: u16) -> color::Color {
 }
 
 // Just get a handle to the current console buffer whatever it is
-fn conout() -> io::Result<winapi::HANDLE> {
+fn conout() -> io::Result<HANDLE> {
     let name = b"CONOUT$\0";
     let handle = unsafe {
-        kernel32::CreateFileA(name.as_ptr() as *const i8,
-                              winapi::GENERIC_READ | winapi::GENERIC_WRITE,
-                              winapi::FILE_SHARE_WRITE,
-                              ptr::null_mut(),
-                              winapi::OPEN_EXISTING,
-                              0,
-                              ptr::null_mut())
+        CreateFileA(name.as_ptr() as *const i8,
+                    GENERIC_READ | GENERIC_WRITE,
+                    FILE_SHARE_WRITE,
+                    ptr::null_mut(),
+                    OPEN_EXISTING,
+                    0,
+                    ptr::null_mut())
     };
-    if handle == winapi::INVALID_HANDLE_VALUE {
+    if handle == INVALID_HANDLE_VALUE {
         Err(io::Error::last_os_error())
     } else {
         Ok(handle)
@@ -101,11 +107,11 @@ impl<T: Write + Send> WinConsole<T> {
     fn apply(&mut self) -> io::Result<()> {
         let out = try!(conout());
         let _unused = self.buf.flush();
-        let mut accum: winapi::WORD = 0;
+        let mut accum: WORD = 0;
         accum |= color_to_bits(self.foreground);
         accum |= color_to_bits(self.background) << 4;
         unsafe {
-            kernel32::SetConsoleTextAttribute(out, accum);
+            SetConsoleTextAttribute(out, accum);
         }
         Ok(())
     }
@@ -118,7 +124,7 @@ impl<T: Write + Send> WinConsole<T> {
         let handle = try!(conout());
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
-            if kernel32::GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
+            if GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
                 fg = bits_to_color(buffer_info.wAttributes);
                 bg = bits_to_color(buffer_info.wAttributes >> 4);
             } else {
@@ -208,7 +214,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         let handle = try!(conout());
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
-            if kernel32::GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
+            if GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
                 let (x, y) = (buffer_info.dwCursorPosition.X,
                               buffer_info.dwCursorPosition.Y);
                 if y == 0 {
@@ -218,11 +224,11 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
                     // cursor_up fail in this case.
                     Ok(())
                 } else {
-                    let pos = winapi::COORD {
+                    let pos = COORD {
                         X: x,
                         Y: y - 1,
                     };
-                    if kernel32::SetConsoleCursorPosition(handle, pos) != 0 {
+                    if SetConsoleCursorPosition(handle, pos) != 0 {
                         Ok(())
                     } else {
                         Err(io::Error::last_os_error().into())
@@ -239,18 +245,18 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         let handle = try!(conout());
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
-            if kernel32::GetConsoleScreenBufferInfo(handle, &mut buffer_info) == 0 {
+            if GetConsoleScreenBufferInfo(handle, &mut buffer_info) == 0 {
                 return Err(io::Error::last_os_error().into());
             }
             let pos = buffer_info.dwCursorPosition;
             let size = buffer_info.dwSize;
-            let num = (size.X - pos.X) as winapi::DWORD;
+            let num = (size.X - pos.X) as DWORD;
             let mut written = 0;
             // 0x0020u16 is ' ' (space) in UTF-16 (same as ascii)
-            if kernel32::FillConsoleOutputCharacterW(handle, 0x0020, num, pos, &mut written) == 0 {
+            if FillConsoleOutputCharacterW(handle, 0x0020, num, pos, &mut written) == 0 {
                 return Err(io::Error::last_os_error().into());
             }
-            if kernel32::FillConsoleOutputAttribute(handle, 0, num, pos, &mut written) == 0 {
+            if FillConsoleOutputAttribute(handle, 0, num, pos, &mut written) == 0 {
                 return Err(io::Error::last_os_error().into());
             }
             // Similar reasoning for not failing as in cursor_up -- it doesn't even make
@@ -265,16 +271,16 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         let handle = try!(conout());
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
-            if kernel32::GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
-                let winapi::COORD { X: x, Y: y } = buffer_info.dwCursorPosition;
+            if GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
+                let COORD { X: x, Y: y } = buffer_info.dwCursorPosition;
                 if x == 0 {
                     Err(Error::CursorDestinationInvalid)
                 } else {
-                    let pos = winapi::COORD {
+                    let pos = COORD {
                         X: 0,
                         Y: y,
                     };
-                    if kernel32::SetConsoleCursorPosition(handle, pos) != 0 {
+                    if SetConsoleCursorPosition(handle, pos) != 0 {
                         Ok(())
                     } else {
                         Err(io::Error::last_os_error().into())
