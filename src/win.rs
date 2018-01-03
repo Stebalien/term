@@ -22,6 +22,7 @@ use Error;
 use Result;
 use Terminal;
 use color;
+use Dims;
 
 use win::winapi::um::wincon::{SetConsoleTextAttribute, SetConsoleCursorPosition};
 use win::winapi::um::wincon::{GetConsoleScreenBufferInfo, FillConsoleOutputCharacterW, COORD};
@@ -286,6 +287,22 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
                         Err(io::Error::last_os_error().into())
                     }
                 }
+            } else {
+                Err(io::Error::last_os_error().into())
+            }
+        }
+    }
+
+    fn dims(&self) -> Result<Dims> {
+        let handle = try!(conout());
+        unsafe {
+            let mut buffer_info = ::std::mem::uninitialized();
+            if kernel32::GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
+                Ok(Dims {
+                    rows: (buffer_info.srWindow.Bottom - buffer_info.srWindow.Top + 1) as u16,
+                    columns: (buffer_info.srWindow.Right - buffer_info.srWindow.Left + 1) as u16,
+                    ..Default::default()
+                })
             } else {
                 Err(io::Error::last_os_error().into())
             }

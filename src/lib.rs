@@ -29,7 +29,8 @@
 //!
 //! and this to your crate root:
 //!
-//! ```rust
+//! ```
+//! # #[allow(unused_extern_crates)]
 //! extern crate term;
 //! ```
 //!
@@ -75,6 +76,8 @@ pub mod terminfo;
 
 #[cfg(windows)]
 mod win;
+#[cfg(unix)]
+mod unix;
 
 /// Alias for stdout terminals.
 pub type StdoutTerminal = Terminal<Output = Stdout> + Send;
@@ -166,6 +169,20 @@ pub enum Attr {
     ForegroundColor(color::Color),
     /// Convenience attribute to set the background color
     BackgroundColor(color::Color),
+}
+
+/// A struct representing the number of columns and rows of the terminal, and, if available, the
+/// width and height of the terminal in pixels
+#[derive(Debug, PartialEq, Hash, Eq, Copy, Clone, Default)]
+pub struct Dims {
+    /// The number of rows in the terminal
+    pub rows: u16,
+    /// The number of columns in the terminal
+    pub columns: u16,
+    /// If available, the pixel width of the terminal
+    pub pixel_width: Option<u32>,
+    /// If available, the pixel height of the terminal
+    pub pixel_height: Option<u32>,
 }
 
 /// An error arising from interacting with the terminal.
@@ -389,6 +406,9 @@ pub trait Terminal: Write {
     ///
     /// Returns `Ok(true)` if the deletion code was printed, or `Err(e)` if there was an error.
     fn carriage_return(&mut self) -> Result<()>;
+
+    /// Gets the size of the terminal window, if available
+    fn dims(&self) -> Result<Dims>;
 
     /// Gets an immutable reference to the stream inside
     fn get_ref(&self) -> &Self::Output;
