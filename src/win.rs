@@ -23,8 +23,8 @@ use Result;
 use Terminal;
 use color;
 
-use win::winapi::um::wincon::{SetConsoleTextAttribute, SetConsoleCursorPosition};
-use win::winapi::um::wincon::{GetConsoleScreenBufferInfo, FillConsoleOutputCharacterW, COORD};
+use win::winapi::um::wincon::{SetConsoleCursorPosition, SetConsoleTextAttribute};
+use win::winapi::um::wincon::{FillConsoleOutputCharacterW, GetConsoleScreenBufferInfo, COORD};
 use win::winapi::um::wincon::FillConsoleOutputAttribute;
 use win::winapi::shared::minwindef::{DWORD, WORD};
 use win::winapi::um::handleapi::INVALID_HANDLE_VALUE;
@@ -82,13 +82,15 @@ fn bits_to_color(bits: u16) -> color::Color {
 fn conout() -> io::Result<HANDLE> {
     let name = b"CONOUT$\0";
     let handle = unsafe {
-        CreateFileA(name.as_ptr() as *const i8,
-                    GENERIC_READ | GENERIC_WRITE,
-                    FILE_SHARE_WRITE,
-                    ptr::null_mut(),
-                    OPEN_EXISTING,
-                    0,
-                    ptr::null_mut())
+        CreateFileA(
+            name.as_ptr() as *const i8,
+            GENERIC_READ | GENERIC_WRITE,
+            FILE_SHARE_WRITE,
+            ptr::null_mut(),
+            OPEN_EXISTING,
+            0,
+            ptr::null_mut(),
+        )
     };
     if handle == INVALID_HANDLE_VALUE {
         Err(io::Error::last_os_error())
@@ -105,7 +107,7 @@ fn test_conout() {
 
 impl<T: Write + Send> WinConsole<T> {
     fn apply(&mut self) -> io::Result<()> {
-        let out = try!(conout());
+        let out = conout()?;
         let _unused = self.buf.flush();
         let mut accum: WORD = 0;
         accum |= color_to_bits(self.foreground);
@@ -121,7 +123,7 @@ impl<T: Write + Send> WinConsole<T> {
     pub fn new(out: T) -> io::Result<WinConsole<T>> {
         let fg;
         let bg;
-        let handle = try!(conout());
+        let handle = conout()?;
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
             if GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
@@ -156,14 +158,14 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
 
     fn fg(&mut self, color: color::Color) -> Result<()> {
         self.foreground = color;
-        try!(self.apply());
+        self.apply()?;
 
         Ok(())
     }
 
     fn bg(&mut self, color: color::Color) -> Result<()> {
         self.background = color;
-        try!(self.apply());
+        self.apply()?;
 
         Ok(())
     }
@@ -172,12 +174,12 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         match attr {
             Attr::ForegroundColor(f) => {
                 self.foreground = f;
-                try!(self.apply());
+                self.apply()?;
                 Ok(())
             }
             Attr::BackgroundColor(b) => {
                 self.background = b;
-                try!(self.apply());
+                self.apply()?;
                 Ok(())
             }
             _ => Err(Error::NotSupported),
@@ -196,7 +198,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
     fn reset(&mut self) -> Result<()> {
         self.foreground = self.def_foreground;
         self.background = self.def_background;
-        try!(self.apply());
+        self.apply()?;
 
         Ok(())
     }
@@ -211,12 +213,14 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
 
     fn cursor_up(&mut self) -> Result<()> {
         let _unused = self.buf.flush();
-        let handle = try!(conout());
+        let handle = conout()?;
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
             if GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
-                let (x, y) = (buffer_info.dwCursorPosition.X,
-                              buffer_info.dwCursorPosition.Y);
+                let (x, y) = (
+                    buffer_info.dwCursorPosition.X,
+                    buffer_info.dwCursorPosition.Y,
+                );
                 if y == 0 {
                     // Even though this might want to be a CursorPositionInvalid, on Unix there
                     // is no checking to see if the cursor is already on the first line.
@@ -224,10 +228,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
                     // cursor_up fail in this case.
                     Ok(())
                 } else {
-                    let pos = COORD {
-                        X: x,
-                        Y: y - 1,
-                    };
+                    let pos = COORD { X: x, Y: y - 1 };
                     if SetConsoleCursorPosition(handle, pos) != 0 {
                         Ok(())
                     } else {
@@ -242,7 +243,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
 
     fn delete_line(&mut self) -> Result<()> {
         let _unused = self.buf.flush();
-        let handle = try!(conout());
+        let handle = conout()?;
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
             if GetConsoleScreenBufferInfo(handle, &mut buffer_info) == 0 {
@@ -268,7 +269,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
 
     fn carriage_return(&mut self) -> Result<()> {
         let _unused = self.buf.flush();
-        let handle = try!(conout());
+        let handle = conout()?;
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
             if GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
@@ -276,10 +277,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
                 if x == 0 {
                     Err(Error::CursorDestinationInvalid)
                 } else {
-                    let pos = COORD {
-                        X: 0,
-                        Y: y,
-                    };
+                    let pos = COORD { X: 0, Y: y };
                     if SetConsoleCursorPosition(handle, pos) != 0 {
                         Ok(())
                     } else {
@@ -301,7 +299,8 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
     }
 
     fn into_inner(self) -> T
-        where Self: Sized
+    where
+        Self: Sized,
     {
         self.buf
     }

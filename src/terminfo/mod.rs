@@ -24,26 +24,15 @@ use Terminal;
 use Result;
 use self::searcher::get_dbpath_for_term;
 use self::parser::compiled::parse;
-use self::parm::{expand, Variables, Param};
+use self::parm::{expand, Param, Variables};
 use self::Error::*;
-
 
 /// Returns true if the named terminal supports basic ANSI escape codes.
 fn is_ansi(name: &str) -> bool {
     // SORTED! We binary search this.
     static ANSI_TERM_PREFIX: &'static [&'static str] = &[
-        "Eterm",
-        "ansi",
-        "eterm",
-        "iterm",
-        "konsole",
-        "linux",
-        "mrxvt",
-        "msyscon",
-        "rxvt",
-        "screen",
-        "tmux",
-        "xterm",
+        "Eterm", "ansi", "eterm", "iterm", "konsole", "linux", "mrxvt", "msyscon", "rxvt",
+        "screen", "tmux", "xterm",
     ];
     match ANSI_TERM_PREFIX.binary_search(&name) {
         Ok(_) => true,
@@ -51,7 +40,6 @@ fn is_ansi(name: &str) -> bool {
         Err(idx) => name.starts_with(ANSI_TERM_PREFIX[idx - 1]),
     }
 }
-
 
 /// A parsed terminfo database entry.
 #[derive(Debug, Clone)]
@@ -70,16 +58,15 @@ impl TermInfo {
     /// Create a `TermInfo` based on current environment.
     pub fn from_env() -> Result<TermInfo> {
         let term_var = env::var("TERM").ok();
-        let term_name = term_var
-            .as_ref()
-            .map(|s| &**s)
-            .or_else(|| env::var("MSYSCON")
-                     .ok()
-                     .and_then(|s| if s == "mintty.exe" {
-                         Some("msyscon")
-                     } else {
-                         None
-                     }));
+        let term_name = term_var.as_ref().map(|s| &**s).or_else(|| {
+            env::var("MSYSCON").ok().and_then(|s| {
+                if s == "mintty.exe" {
+                    Some("msyscon")
+                } else {
+                    None
+                }
+            })
+        });
         if let Some(term_name) = term_name {
             return TermInfo::from_name(term_name);
         } else {
@@ -93,7 +80,7 @@ impl TermInfo {
             match TermInfo::from_path(&path) {
                 Ok(term) => return Ok(term),
                 // Skip IO Errors (e.g., permission denied).
-                Err(::Error::Io(_)) => {},
+                Err(::Error::Io(_)) => {}
                 // Don't ignore malformed terminfo databases.
                 Err(e) => return Err(e),
             }
@@ -131,7 +118,7 @@ impl TermInfo {
     // might do this for
     // us. Alas. )
     fn _from_path(path: &Path) -> Result<TermInfo> {
-        let file = try!(File::open(path).map_err(::Error::Io));
+        let file = File::open(path).map_err(::Error::Io)?;
         let mut reader = BufReader::new(file);
         parse(&mut reader, false)
     }
@@ -139,15 +126,13 @@ impl TermInfo {
     /// Retrieve a capability `cmd` and expand it with `params`, writing result to `out`.
     pub fn apply_cap(&self, cmd: &str, params: &[Param], out: &mut io::Write) -> Result<()> {
         match self.strings.get(cmd) {
-            Some(cmd) => {
-                match expand(cmd, params, &mut Variables::new()) {
-                    Ok(s) => {
-                        try!(out.write_all(&s));
-                        Ok(())
-                    }
-                    Err(e) => Err(e.into()),
+            Some(cmd) => match expand(cmd, params, &mut Variables::new()) {
+                Ok(s) => {
+                    out.write_all(&s)?;
+                    Ok(())
                 }
-            }
+                Err(e) => Err(e.into()),
+            },
             None => Err(::Error::NotSupported),
         }
     }
@@ -156,24 +141,23 @@ impl TermInfo {
     pub fn reset(&self, out: &mut io::Write) -> Result<()> {
         // are there any terminals that have color/attrs and not sgr0?
         // Try falling back to sgr, then op
-        let cmd = match [("sgr0", &[] as &[Param]), ("sgr", &[Param::Number(0)]), ("op", &[])]
-                            .iter()
-                            .filter_map(|&(cap, params)| {
-                                self.strings.get(cap).map(|c| (c, params))
-                            })
-                            .next() {
-            Some((op, params)) => {
-                match expand(op, params, &mut Variables::new()) {
-                    Ok(cmd) => cmd,
-                    Err(e) => return Err(e.into()),
-                }
-            }
+        let cmd = match [
+            ("sgr0", &[] as &[Param]),
+            ("sgr", &[Param::Number(0)]),
+            ("op", &[]),
+        ].iter()
+            .filter_map(|&(cap, params)| self.strings.get(cap).map(|c| (c, params)))
+            .next()
+        {
+            Some((op, params)) => match expand(op, params, &mut Variables::new()) {
+                Ok(cmd) => cmd,
+                Err(e) => return Err(e.into()),
+            },
             None => return Err(::Error::NotSupported),
         };
-        try!(out.write_all(&cmd));
+        out.write_all(&cmd)?;
         Ok(())
     }
-
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -255,7 +239,6 @@ pub mod parser {
 }
 pub mod parm;
 
-
 fn cap_for_attr(attr: Attr) -> &'static str {
     match attr {
         Attr::Bold => "bold",
@@ -288,7 +271,8 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
     fn fg(&mut self, color: color::Color) -> Result<()> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
-            return self.ti.apply_cap("setaf", &[Param::Number(color as i32)], &mut self.out);
+            return self.ti
+                .apply_cap("setaf", &[Param::Number(color as i32)], &mut self.out);
         }
         Err(::Error::ColorOutOfRange)
     }
@@ -296,7 +280,8 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
     fn bg(&mut self, color: color::Color) -> Result<()> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
-            return self.ti.apply_cap("setab", &[Param::Number(color as i32)], &mut self.out);
+            return self.ti
+                .apply_cap("setab", &[Param::Number(color as i32)], &mut self.out);
         }
         Err(::Error::ColorOutOfRange)
     }
@@ -324,7 +309,9 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
     }
 
     fn supports_reset(&self) -> bool {
-        ["sgr0", "sgr", "op"].iter().any(|&cap| self.ti.strings.get(cap).is_some())
+        ["sgr0", "sgr", "op"]
+            .iter()
+            .any(|&cap| self.ti.strings.get(cap).is_some())
     }
 
     fn supports_color(&self) -> bool {
@@ -352,7 +339,8 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
     }
 
     fn into_inner(self) -> T
-        where Self: Sized
+    where
+        Self: Sized,
     {
         self.out
     }
@@ -361,8 +349,8 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
 impl<T: Write> TerminfoTerminal<T> {
     /// Create a new TerminfoTerminal with the given TermInfo and Write.
     pub fn new_with_terminfo(out: T, terminfo: TermInfo) -> TerminfoTerminal<T> {
-        let nc = if terminfo.strings.contains_key("setaf") &&
-                    terminfo.strings.contains_key("setab") {
+        let nc = if terminfo.strings.contains_key("setaf") && terminfo.strings.contains_key("setab")
+        {
             terminfo.numbers.get("colors").map_or(0, |&n| n)
         } else {
             0
@@ -379,7 +367,9 @@ impl<T: Write> TerminfoTerminal<T> {
     ///
     /// Returns `None` when the terminfo cannot be found or parsed.
     pub fn new(out: T) -> Option<TerminfoTerminal<T>> {
-        TermInfo::from_env().map(move |ti| TerminfoTerminal::new_with_terminfo(out, ti)).ok()
+        TermInfo::from_env()
+            .map(move |ti| TerminfoTerminal::new_with_terminfo(out, ti))
+            .ok()
     }
 
     fn dim_if_necessary(&self, color: color::Color) -> color::Color {
@@ -390,7 +380,6 @@ impl<T: Write> TerminfoTerminal<T> {
         }
     }
 }
-
 
 impl<T: Write> Write for TerminfoTerminal<T> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {

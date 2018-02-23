@@ -26,7 +26,7 @@ pub fn get_dbpath_for_term(term: &str) -> Option<PathBuf> {
 
     // Find search directory
     // The terminfo manual says:
-    // 
+    //
     // > If  the  environment  variable  TERMINFO is set, it is interpreted
     // > as the pathname of a directory containing the compiled description
     // > you are working on.  Only that directory is searched.

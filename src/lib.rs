@@ -58,8 +58,7 @@
 
 #![doc(html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
        html_favicon_url = "https://doc.rust-lang.org/favicon.ico",
-       html_root_url = "https://stebalien.github.io/doc/term/term/",
-       test(attr(deny(warnings))))]
+       html_root_url = "https://stebalien.github.io/doc/term/term/", test(attr(deny(warnings))))]
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
 
@@ -71,7 +70,7 @@ pub use terminfo::TerminfoTerminal;
 #[cfg(windows)]
 pub use win::WinConsole;
 
-use std::io::{self, Stdout, Stderr};
+use std::io::{self, Stderr, Stdout};
 
 pub mod terminfo;
 
@@ -96,7 +95,11 @@ pub fn stdout() -> Option<Box<StdoutTerminal>> {
 pub fn stdout() -> Option<Box<StdoutTerminal>> {
     TerminfoTerminal::new(io::stdout())
         .map(|t| Box::new(t) as Box<StdoutTerminal>)
-        .or_else(|| WinConsole::new(io::stdout()).ok().map(|t| Box::new(t) as Box<StdoutTerminal>))
+        .or_else(|| {
+            WinConsole::new(io::stdout())
+                .ok()
+                .map(|t| Box::new(t) as Box<StdoutTerminal>)
+        })
 }
 
 #[cfg(not(windows))]
@@ -112,9 +115,12 @@ pub fn stderr() -> Option<Box<StderrTerminal>> {
 pub fn stderr() -> Option<Box<StderrTerminal>> {
     TerminfoTerminal::new(io::stderr())
         .map(|t| Box::new(t) as Box<StderrTerminal>)
-        .or_else(|| WinConsole::new(io::stderr()).ok().map(|t| Box::new(t) as Box<StderrTerminal>))
+        .or_else(|| {
+            WinConsole::new(io::stderr())
+                .ok()
+                .map(|t| Box::new(t) as Box<StderrTerminal>)
+        })
 }
-
 
 /// Terminal color definitions
 #[allow(missing_docs)]
@@ -204,54 +210,38 @@ impl std::cmp::PartialEq for Error {
         use Error::*;
         match *self {
             Io(_) => false,
-            TerminfoParsing(ref inner1) => {
-                match *other {
-                    TerminfoParsing(ref inner2) => inner1 == inner2,
-                    _ => false,
-                }
-            }
-            ParameterizedExpansion(ref inner1) => {
-                match *other {
-                    ParameterizedExpansion(ref inner2) => inner1 == inner2,
-                    _ => false,
-                }
-            }
-            NotSupported => {
-                match *other {
-                    NotSupported => true,
-                    _ => false,
-                }
-            }
-            TermUnset => {
-                match *other {
-                    TermUnset => true,
-                    _ => false,
-                }
-            }
-            TerminfoEntryNotFound => {
-                match *other {
-                    TerminfoEntryNotFound => true,
-                    _ => false,
-                }
-            }
-            CursorDestinationInvalid => {
-                match *other {
-                    CursorDestinationInvalid => true,
-                    _ => false,
-                }
-            }
-            ColorOutOfRange => {
-                match *other {
-                    ColorOutOfRange => true,
-                    _ => false,
-                }
-            }
-            __Nonexhaustive => {
-                match *other {
-                    __Nonexhaustive => true,
-                    _ => false,
-                }
-            }
+            TerminfoParsing(ref inner1) => match *other {
+                TerminfoParsing(ref inner2) => inner1 == inner2,
+                _ => false,
+            },
+            ParameterizedExpansion(ref inner1) => match *other {
+                ParameterizedExpansion(ref inner2) => inner1 == inner2,
+                _ => false,
+            },
+            NotSupported => match *other {
+                NotSupported => true,
+                _ => false,
+            },
+            TermUnset => match *other {
+                TermUnset => true,
+                _ => false,
+            },
+            TerminfoEntryNotFound => match *other {
+                TerminfoEntryNotFound => true,
+                _ => false,
+            },
+            CursorDestinationInvalid => match *other {
+                CursorDestinationInvalid => true,
+                _ => false,
+            },
+            ColorOutOfRange => match *other {
+                ColorOutOfRange => true,
+                _ => false,
+            },
+            __Nonexhaustive => match *other {
+                __Nonexhaustive => true,
+                _ => false,
+            },
         }
     }
 }
@@ -399,5 +389,7 @@ pub trait Terminal: Write {
     fn get_mut(&mut self) -> &mut Self::Output;
 
     /// Returns the contained stream, destroying the `Terminal`
-    fn into_inner(self) -> Self::Output where Self: Sized;
+    fn into_inner(self) -> Self::Output
+    where
+        Self: Sized;
 }

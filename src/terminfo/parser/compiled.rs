@@ -26,11 +26,11 @@ pub use terminfo::parser::names::*;
 // sure if portable.
 
 fn read_le_u16(r: &mut io::Read) -> io::Result<u32> {
-    return r.read_u16::<LittleEndian>().map(|i| i as u32)
+    return r.read_u16::<LittleEndian>().map(|i| i as u32);
 }
 
 fn read_le_u32(r: &mut io::Read) -> io::Result<u32> {
-    return r.read_u32::<LittleEndian>()
+    return r.read_u32::<LittleEndian>();
 }
 
 fn read_byte(r: &mut io::Read) -> io::Result<u8> {
@@ -50,7 +50,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
     };
 
     // Check magic number
-    let magic = try!(file.read_u16::<LittleEndian>());
+    let magic = file.read_u16::<LittleEndian>()?;
 
     let read_number = match magic {
         0x011A => read_le_u16,
@@ -64,7 +64,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
     // 0.
     macro_rules! read_nonneg {
         () => {{
-            match try!(read_le_u16(file)) as i16 {
+            match read_le_u16(file)? as i16 {
                 n if n >= 0 => n as usize,
                 -1 => 0,
                 _ => return Err(InvalidLength.into()),
@@ -96,83 +96,80 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
 
     // don't read NUL
     let mut bytes = Vec::new();
-    try!(file.take((names_bytes - 1) as u64).read_to_end(&mut bytes));
+    file.take((names_bytes - 1) as u64).read_to_end(&mut bytes)?;
     let names_str = match String::from_utf8(bytes) {
         Ok(s) => s,
         Err(e) => return Err(NotUtf8(e.utf8_error()).into()),
     };
 
-    let term_names: Vec<String> = names_str.split('|')
-                                           .map(|s| s.to_owned())
-                                           .collect();
+    let term_names: Vec<String> = names_str.split('|').map(|s| s.to_owned()).collect();
     // consume NUL
-    if try!(read_byte(file)) != b'\0' {
+    if read_byte(file)? != b'\0' {
         return Err(NamesMissingNull.into());
     }
 
-    let bools_map: HashMap<&str, bool> = try! {
-        (0..bools_bytes).filter_map(|i| match read_byte(file) {
+    let bools_map = (0..bools_bytes)
+        .filter_map(|i| match read_byte(file) {
             Err(e) => Some(Err(e)),
             Ok(1) => Some(Ok((bnames[i], true))),
-            Ok(_) => None
-        }).collect()
-    };
+            Ok(_) => None,
+        })
+        .collect::<io::Result<HashMap<_, _>>>()?;
 
     if (bools_bytes + names_bytes) % 2 == 1 {
-        try!(read_byte(file)); // compensate for padding
+        read_byte(file)?; // compensate for padding
     }
 
-    let numbers_map: HashMap<&str, u32> = try! {
-        (0..numbers_count).filter_map(|i| match read_number(file) {
+    let numbers_map = (0..numbers_count)
+        .filter_map(|i| match read_number(file) {
             Ok(0xFFFF) => None,
             Ok(n) => Some(Ok((nnames[i], n))),
-            Err(e) => Some(Err(e))
-        }).collect()
-    };
+            Err(e) => Some(Err(e)),
+        })
+        .collect::<io::Result<HashMap<_, _>>>()?;
 
     let string_map: HashMap<&str, Vec<u8>> = if string_offsets_count > 0 {
-        let string_offsets: Vec<u16> = try!((0..string_offsets_count)
-                                                .map(|_| file.read_u16::<LittleEndian>())
-                                                .collect());
+        let string_offsets = (0..string_offsets_count)
+            .map(|_| file.read_u16::<LittleEndian>())
+            .collect::<io::Result<Vec<_>>>()?;
 
         let mut string_table = Vec::new();
-        try!(file.take(string_table_bytes as u64).read_to_end(&mut string_table));
+        file.take(string_table_bytes as u64)
+            .read_to_end(&mut string_table)?;
 
-        try!(string_offsets.into_iter()
-                           .enumerate()
-                           .filter(|&(_, offset)| {
-                               // non-entry
-                               offset != 0xFFFF
-                           })
-                           .map(|(i, offset)| {
-                               let offset = offset as usize;
+        string_offsets
+            .into_iter()
+            .enumerate()
+            .filter(|&(_, offset)| {
+                // non-entry
+                offset != 0xFFFF
+            })
+            .map(|(i, offset)| {
+                let offset = offset as usize;
 
-                               let name = if snames[i] == "_" {
-                                   stringfnames[i]
-                               } else {
-                                   snames[i]
-                               };
+                let name = if snames[i] == "_" {
+                    stringfnames[i]
+                } else {
+                    snames[i]
+                };
 
-                               if offset == 0xFFFE {
-                                   // undocumented: FFFE indicates cap@, which means the capability
-                                   // is not present
-                                   // unsure if the handling for this is correct
-                                   return Ok((name, Vec::new()));
-                               }
+                if offset == 0xFFFE {
+                    // undocumented: FFFE indicates cap@, which means the capability
+                    // is not present
+                    // unsure if the handling for this is correct
+                    return Ok((name, Vec::new()));
+                }
 
-                               // Find the offset of the NUL we want to go to
-                               let nulpos = string_table[offset..string_table_bytes]
-                                                .iter()
-                                                .position(|&b| b == 0);
-                               match nulpos {
-                                   Some(len) => {
-                                       Ok((name,
-                                           string_table[offset..offset + len].to_vec()))
-                                   }
-                                   None => return Err(::Error::TerminfoParsing(StringsMissingNull)),
-                               }
-                           })
-                           .collect())
+                // Find the offset of the NUL we want to go to
+                let nulpos = string_table[offset..string_table_bytes]
+                    .iter()
+                    .position(|&b| b == 0);
+                match nulpos {
+                    Some(len) => Ok((name, string_table[offset..offset + len].to_vec())),
+                    None => return Err(::Error::TerminfoParsing(StringsMissingNull)),
+                }
+            })
+            .collect::<Result<HashMap<_, _>>>()?
     } else {
         HashMap::new()
     };
@@ -189,7 +186,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
 #[cfg(test)]
 mod test {
 
-    use super::{boolnames, boolfnames, numnames, numfnames, stringnames, stringfnames};
+    use super::{boolfnames, boolnames, numfnames, numnames, stringfnames, stringnames};
 
     #[test]
     fn test_veclens() {
