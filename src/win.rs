@@ -75,7 +75,7 @@ fn bits_to_color(bits: u16) -> color::Color {
         _ => unreachable!(),
     };
 
-    color | (bits & 0x8) // copy the hi-intensity bit
+    color | (bits as u32 & 0x8) // copy the hi-intensity bit
 }
 
 // Just get a handle to the current console buffer whatever it is
