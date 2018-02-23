@@ -14,6 +14,8 @@ use std::collections::HashMap;
 use std::io::prelude::*;
 use std::io;
 
+use byteorder::{LittleEndian, ReadBytesExt};
+
 use terminfo::Error::*;
 use terminfo::TermInfo;
 use Result;
@@ -23,16 +25,12 @@ pub use terminfo::parser::names::*;
 // These are the orders ncurses uses in its compiled format (as of 5.9). Not
 // sure if portable.
 
-fn read_le_u16(r: &mut io::Read) -> io::Result<u16> {
-    let mut b = [0; 2];
-    let mut amt = 0;
-    while amt < b.len() {
-        match try!(r.read(&mut b[amt..])) {
-            0 => return Err(io::Error::new(io::ErrorKind::Other, "end of file")),
-            n => amt += n,
-        }
-    }
-    Ok((b[0] as u16) | ((b[1] as u16) << 8))
+fn read_le_u16(r: &mut io::Read) -> io::Result<u32> {
+    return r.read_u16::<LittleEndian>().map(|i| i as u32)
+}
+
+fn read_le_u32(r: &mut io::Read) -> io::Result<u32> {
+    return r.read_u32::<LittleEndian>()
 }
 
 fn read_byte(r: &mut io::Read) -> io::Result<u8> {
@@ -52,10 +50,13 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
     };
 
     // Check magic number
-    let magic = try!(read_le_u16(file));
-    if magic != 0x011A {
-        return Err(BadMagic(magic).into());
-    }
+    let magic = try!(file.read_u16::<LittleEndian>());
+
+    let read_number = match magic {
+        0x011A => read_le_u16,
+        0x021e => read_le_u32,
+        _ => return Err(BadMagic(magic).into()),
+    };
 
     // According to the spec, these fields must be >= -1 where -1 means that the
     // feature is not
@@ -121,8 +122,8 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
         try!(read_byte(file)); // compensate for padding
     }
 
-    let numbers_map: HashMap<&str, u16> = try! {
-        (0..numbers_count).filter_map(|i| match read_le_u16(file) {
+    let numbers_map: HashMap<&str, u32> = try! {
+        (0..numbers_count).filter_map(|i| match read_number(file) {
             Ok(0xFFFF) => None,
             Ok(n) => Some(Ok((nnames[i], n))),
             Err(e) => Some(Err(e))
@@ -131,7 +132,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
 
     let string_map: HashMap<&str, Vec<u8>> = if string_offsets_count > 0 {
         let string_offsets: Vec<u16> = try!((0..string_offsets_count)
-                                                .map(|_| read_le_u16(file))
+                                                .map(|_| file.read_u16::<LittleEndian>())
                                                 .collect());
 
         let mut string_table = Vec::new();

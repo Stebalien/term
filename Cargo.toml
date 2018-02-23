@@ -17,6 +17,9 @@ categories = ["command-line-interface"]
 travis-ci = { repository = "Stebalien/term" }
 appveyor = { repository = "Stebalien/term" }
 
+[dependencies]
+byteorder = "1.2.1"
+
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["wincon", "handleapi", "fileapi"] }
 

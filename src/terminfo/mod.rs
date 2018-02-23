@@ -61,7 +61,7 @@ pub struct TermInfo {
     /// Map of capability name to boolean value
     pub bools: HashMap<&'static str, bool>,
     /// Map of capability name to numeric value
-    pub numbers: HashMap<&'static str, u16>,
+    pub numbers: HashMap<&'static str, u32>,
     /// Map of capability name to raw (unexpanded) string
     pub strings: HashMap<&'static str, Vec<u8>>,
 }
@@ -107,7 +107,7 @@ impl TermInfo {
             strings.insert("setab", b"\x1B[4%p1%dm".to_vec());
 
             let mut numbers = HashMap::new();
-            numbers.insert("colors", 8u16);
+            numbers.insert("colors", 8);
 
             Ok(TermInfo {
                 names: vec![name.to_owned()],
@@ -181,7 +181,7 @@ impl TermInfo {
 pub enum Error {
     /// The "magic" number at the start of the file was wrong.
     ///
-    /// It should be `0x11A`
+    /// It should be `0x11A` (16bit numbers) or `0x21e` (32bit numbers)
     BadMagic(u16),
     /// The names in the file were not valid UTF-8.
     ///
@@ -278,7 +278,7 @@ fn cap_for_attr(attr: Attr) -> &'static str {
 /// parsed Terminfo database record.
 #[derive(Clone, Debug)]
 pub struct TerminfoTerminal<T> {
-    num_colors: u16,
+    num_colors: u32,
     out: T,
     ti: TermInfo,
 }
@@ -371,7 +371,7 @@ impl<T: Write> TerminfoTerminal<T> {
         TerminfoTerminal {
             out: out,
             ti: terminfo,
-            num_colors: nc,
+            num_colors: nc as u32,
         }
     }
 
