@@ -16,6 +16,7 @@ extern crate winapi;
 
 use std::io::prelude::*;
 use std::io;
+use std::ops::Deref;
 use std::ptr;
 use Attr;
 use Error;
@@ -27,7 +28,7 @@ use win::winapi::um::wincon::{SetConsoleCursorPosition, SetConsoleTextAttribute}
 use win::winapi::um::wincon::{FillConsoleOutputCharacterW, GetConsoleScreenBufferInfo, COORD};
 use win::winapi::um::wincon::FillConsoleOutputAttribute;
 use win::winapi::shared::minwindef::{DWORD, WORD};
-use win::winapi::um::handleapi::INVALID_HANDLE_VALUE;
+use win::winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
 use win::winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
 use win::winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE, HANDLE};
 
@@ -78,8 +79,35 @@ fn bits_to_color(bits: u16) -> color::Color {
     color | (bits as u32 & 0x8) // copy the hi-intensity bit
 }
 
+struct HandleWrapper {
+    inner: HANDLE,
+}
+
+impl HandleWrapper {
+    fn new(h: HANDLE) -> HandleWrapper {
+        HandleWrapper { inner: h }
+    }
+}
+
+impl Drop for HandleWrapper {
+    fn drop(&mut self) {
+        if self.inner != INVALID_HANDLE_VALUE {
+            unsafe {
+                CloseHandle(self.inner);
+            }
+        }
+    }
+}
+
+impl Deref for HandleWrapper {
+    type Target = HANDLE;
+    fn deref(&self) -> &HANDLE {
+        &self.inner
+    }
+}
+
 // Just get a handle to the current console buffer whatever it is
-fn conout() -> io::Result<HANDLE> {
+fn conout() -> io::Result<HandleWrapper> {
     let name = b"CONOUT$\0";
     let handle = unsafe {
         CreateFileA(
@@ -95,7 +123,7 @@ fn conout() -> io::Result<HANDLE> {
     if handle == INVALID_HANDLE_VALUE {
         Err(io::Error::last_os_error())
     } else {
-        Ok(handle)
+        Ok(HandleWrapper::new(handle))
     }
 }
 
@@ -113,7 +141,7 @@ impl<T: Write + Send> WinConsole<T> {
         accum |= color_to_bits(self.foreground);
         accum |= color_to_bits(self.background) << 4;
         unsafe {
-            SetConsoleTextAttribute(out, accum);
+            SetConsoleTextAttribute(*out, accum);
         }
         Ok(())
     }
@@ -126,7 +154,7 @@ impl<T: Write + Send> WinConsole<T> {
         let handle = conout()?;
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
-            if GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
+            if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) != 0 {
                 fg = bits_to_color(buffer_info.wAttributes);
                 bg = bits_to_color(buffer_info.wAttributes >> 4);
             } else {
@@ -216,7 +244,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         let handle = conout()?;
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
-            if GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
+            if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) != 0 {
                 let (x, y) = (
                     buffer_info.dwCursorPosition.X,
                     buffer_info.dwCursorPosition.Y,
@@ -229,7 +257,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
                     Ok(())
                 } else {
                     let pos = COORD { X: x, Y: y - 1 };
-                    if SetConsoleCursorPosition(handle, pos) != 0 {
+                    if SetConsoleCursorPosition(*handle, pos) != 0 {
                         Ok(())
                     } else {
                         Err(io::Error::last_os_error().into())
@@ -246,7 +274,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         let handle = conout()?;
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
-            if GetConsoleScreenBufferInfo(handle, &mut buffer_info) == 0 {
+            if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) == 0 {
                 return Err(io::Error::last_os_error().into());
             }
             let pos = buffer_info.dwCursorPosition;
@@ -254,10 +282,10 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
             let num = (size.X - pos.X) as DWORD;
             let mut written = 0;
             // 0x0020u16 is ' ' (space) in UTF-16 (same as ascii)
-            if FillConsoleOutputCharacterW(handle, 0x0020, num, pos, &mut written) == 0 {
+            if FillConsoleOutputCharacterW(*handle, 0x0020, num, pos, &mut written) == 0 {
                 return Err(io::Error::last_os_error().into());
             }
-            if FillConsoleOutputAttribute(handle, 0, num, pos, &mut written) == 0 {
+            if FillConsoleOutputAttribute(*handle, 0, num, pos, &mut written) == 0 {
                 return Err(io::Error::last_os_error().into());
             }
             // Similar reasoning for not failing as in cursor_up -- it doesn't even make
@@ -272,13 +300,13 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         let handle = conout()?;
         unsafe {
             let mut buffer_info = ::std::mem::uninitialized();
-            if GetConsoleScreenBufferInfo(handle, &mut buffer_info) != 0 {
+            if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) != 0 {
                 let COORD { X: x, Y: y } = buffer_info.dwCursorPosition;
                 if x == 0 {
                     Err(Error::CursorDestinationInvalid)
                 } else {
                     let pos = COORD { X: 0, Y: y };
-                    if SetConsoleCursorPosition(handle, pos) != 0 {
+                    if SetConsoleCursorPosition(*handle, pos) != 0 {
                         Ok(())
                     } else {
                         Err(io::Error::last_os_error().into())
