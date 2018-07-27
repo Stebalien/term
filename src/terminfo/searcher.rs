@@ -16,6 +16,8 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
+use dirs;
+
 /// Return path to database entry for `term`
 pub fn get_dbpath_for_term(term: &str) -> Option<PathBuf> {
     let mut dirs_to_search = Vec::new();
@@ -56,7 +58,7 @@ pub fn get_dbpath_for_term(term: &str) -> Option<PathBuf> {
         // ~/.terminfo, ncurses will search /etc/terminfo, then
         // /lib/terminfo, and eventually /usr/share/terminfo.
         // On Haiku the database can be found at /boot/system/data/terminfo
-        if let Some(mut homedir) = env::home_dir() {
+        if let Some(mut homedir) = dirs::home_dir() {
             homedir.push(".terminfo");
             dirs_to_search.push(homedir)
         }
