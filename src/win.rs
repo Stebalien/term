@@ -45,10 +45,7 @@ pub struct WinConsoleInfo {
 /// A Terminal implementation which uses the Win32 Console API.
 pub struct WinConsole<T> {
     buf: T,
-    def_foreground: color::Color,
-    def_background: color::Color,
-    foreground: color::Color,
-    background: color::Color,
+    info: WinConsoleInfo,
 }
 
 fn color_to_bits(color: color::Color) -> u16 {
@@ -173,8 +170,8 @@ impl<T: Write + Send> WinConsole<T> {
         let out = conout()?;
         let _unused = self.buf.flush();
         let mut accum: WORD = 0;
-        accum |= color_to_bits(self.foreground);
-        accum |= color_to_bits(self.background) << 4;
+        accum |= color_to_bits(self.info.foreground);
+        accum |= color_to_bits(self.info.background) << 4;
         unsafe {
             SetConsoleTextAttribute(*out, accum);
         }
@@ -182,21 +179,18 @@ impl<T: Write + Send> WinConsole<T> {
     }
 
     /// Create a new WinConsole with the given WinConsoleInfo and out
-    pub fn new_with_consoleinfo(out: T, consoleinfo: WinConsoleInfo) -> WinConsole<T> {
+    pub fn new_with_consoleinfo(out: T, info: WinConsoleInfo) -> WinConsole<T> {
         WinConsole {
             buf: out,
-            def_foreground: consoleinfo.def_foreground,
-            def_background: consoleinfo.def_background,
-            foreground: consoleinfo.foreground,
-            background: consoleinfo.background,
+            info,
         }
     }
 
     /// Returns `Err` whenever the terminal cannot be created for some
     /// reason.
     pub fn new(out: T) -> io::Result<WinConsole<T>> {
-        let consoleinfo = WinConsoleInfo::from_env()?;
-        Ok(Self::new_with_consoleinfo(out, consoleinfo))
+        let info = WinConsoleInfo::from_env()?;
+        Ok(Self::new_with_consoleinfo(out, info))
     }
 }
 
@@ -214,14 +208,14 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
     type Output = T;
 
     fn fg(&mut self, color: color::Color) -> Result<()> {
-        self.foreground = color;
+        self.info.foreground = color;
         self.apply()?;
 
         Ok(())
     }
 
     fn bg(&mut self, color: color::Color) -> Result<()> {
-        self.background = color;
+        self.info.background = color;
         self.apply()?;
 
         Ok(())
@@ -230,12 +224,12 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
     fn attr(&mut self, attr: Attr) -> Result<()> {
         match attr {
             Attr::ForegroundColor(f) => {
-                self.foreground = f;
+                self.info.foreground = f;
                 self.apply()?;
                 Ok(())
             }
             Attr::BackgroundColor(b) => {
-                self.background = b;
+                self.info.background = b;
                 self.apply()?;
                 Ok(())
             }
@@ -253,8 +247,8 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
     }
 
     fn reset(&mut self) -> Result<()> {
-        self.foreground = self.def_foreground;
-        self.background = self.def_background;
+        self.info.foreground = self.info.def_foreground;
+        self.info.background = self.info.def_background;
         self.apply()?;
 
         Ok(())
