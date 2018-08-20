@@ -32,13 +32,20 @@ use win::winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
 use win::winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
 use win::winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE, HANDLE};
 
-/// A Terminal implementation which uses the Win32 Console API.
-pub struct WinConsole<T> {
-    buf: T,
+
+/// Console info which can be used by a Terminal implementation
+/// which uses the Win32 Console API.
+pub struct WinConsoleInfo {
     def_foreground: color::Color,
     def_background: color::Color,
     foreground: color::Color,
     background: color::Color,
+}
+
+/// A Terminal implementation which uses the Win32 Console API.
+pub struct WinConsole<T> {
+    buf: T,
+    info: WinConsoleInfo,
 }
 
 fn color_to_bits(color: color::Color) -> u16 {
@@ -133,22 +140,10 @@ fn test_conout() {
     assert!(conout().is_ok())
 }
 
-impl<T: Write + Send> WinConsole<T> {
-    fn apply(&mut self) -> io::Result<()> {
-        let out = conout()?;
-        let _unused = self.buf.flush();
-        let mut accum: WORD = 0;
-        accum |= color_to_bits(self.foreground);
-        accum |= color_to_bits(self.background) << 4;
-        unsafe {
-            SetConsoleTextAttribute(*out, accum);
-        }
-        Ok(())
-    }
-
-    /// Returns `Err` whenever the terminal cannot be created for some
+impl WinConsoleInfo {
+    /// Returns `Err` whenever console info cannot be retrieved for some
     /// reason.
-    pub fn new(out: T) -> io::Result<WinConsole<T>> {
+    pub fn from_env() -> io::Result<WinConsoleInfo> {
         let fg;
         let bg;
         let handle = conout()?;
@@ -161,13 +156,41 @@ impl<T: Write + Send> WinConsole<T> {
                 return Err(io::Error::last_os_error());
             }
         }
-        Ok(WinConsole {
-            buf: out,
+        Ok(WinConsoleInfo {
             def_foreground: fg,
             def_background: bg,
             foreground: fg,
             background: bg,
         })
+    }
+}
+
+impl<T: Write + Send> WinConsole<T> {
+    fn apply(&mut self) -> io::Result<()> {
+        let out = conout()?;
+        let _unused = self.buf.flush();
+        let mut accum: WORD = 0;
+        accum |= color_to_bits(self.info.foreground);
+        accum |= color_to_bits(self.info.background) << 4;
+        unsafe {
+            SetConsoleTextAttribute(*out, accum);
+        }
+        Ok(())
+    }
+
+    /// Create a new WinConsole with the given WinConsoleInfo and out
+    pub fn new_with_consoleinfo(out: T, info: WinConsoleInfo) -> WinConsole<T> {
+        WinConsole {
+            buf: out,
+            info,
+        }
+    }
+
+    /// Returns `Err` whenever the terminal cannot be created for some
+    /// reason.
+    pub fn new(out: T) -> io::Result<WinConsole<T>> {
+        let info = WinConsoleInfo::from_env()?;
+        Ok(Self::new_with_consoleinfo(out, info))
     }
 }
 
@@ -185,14 +208,14 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
     type Output = T;
 
     fn fg(&mut self, color: color::Color) -> Result<()> {
-        self.foreground = color;
+        self.info.foreground = color;
         self.apply()?;
 
         Ok(())
     }
 
     fn bg(&mut self, color: color::Color) -> Result<()> {
-        self.background = color;
+        self.info.background = color;
         self.apply()?;
 
         Ok(())
@@ -201,12 +224,12 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
     fn attr(&mut self, attr: Attr) -> Result<()> {
         match attr {
             Attr::ForegroundColor(f) => {
-                self.foreground = f;
+                self.info.foreground = f;
                 self.apply()?;
                 Ok(())
             }
             Attr::BackgroundColor(b) => {
-                self.background = b;
+                self.info.background = b;
                 self.apply()?;
                 Ok(())
             }
@@ -224,8 +247,8 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
     }
 
     fn reset(&mut self) -> Result<()> {
-        self.foreground = self.def_foreground;
-        self.background = self.def_background;
+        self.info.foreground = self.info.def_foreground;
+        self.info.background = self.info.def_background;
         self.apply()?;
 
         Ok(())
