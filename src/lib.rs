@@ -72,7 +72,7 @@ use std::io::prelude::*;
 
 pub use terminfo::TerminfoTerminal;
 #[cfg(windows)]
-pub use win::WinConsole;
+pub use win::{WinConsole, WinConsoleInfo};
 
 use std::io::{self, Stderr, Stdout};
 

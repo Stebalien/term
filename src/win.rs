@@ -32,6 +32,16 @@ use win::winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
 use win::winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
 use win::winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE, HANDLE};
 
+
+/// Console info which can be used by a Terminal implementation
+/// which uses the Win32 Console API.
+pub struct WinConsoleInfo {
+    def_foreground: color::Color,
+    def_background: color::Color,
+    foreground: color::Color,
+    background: color::Color,
+}
+
 /// A Terminal implementation which uses the Win32 Console API.
 pub struct WinConsole<T> {
     buf: T,
@@ -133,6 +143,31 @@ fn test_conout() {
     assert!(conout().is_ok())
 }
 
+impl WinConsoleInfo {
+    /// Returns `Err` whenever console info cannot be retrieved for some
+    /// reason.
+    pub fn from_env() -> io::Result<WinConsoleInfo> {
+        let fg;
+        let bg;
+        let handle = conout()?;
+        unsafe {
+            let mut buffer_info = ::std::mem::uninitialized();
+            if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) != 0 {
+                fg = bits_to_color(buffer_info.wAttributes);
+                bg = bits_to_color(buffer_info.wAttributes >> 4);
+            } else {
+                return Err(io::Error::last_os_error());
+            }
+        }
+        Ok(WinConsoleInfo {
+            def_foreground: fg,
+            def_background: bg,
+            foreground: fg,
+            background: bg,
+        })
+    }
+}
+
 impl<T: Write + Send> WinConsole<T> {
     fn apply(&mut self) -> io::Result<()> {
         let out = conout()?;
@@ -146,28 +181,22 @@ impl<T: Write + Send> WinConsole<T> {
         Ok(())
     }
 
+    /// Create a new WinConsole with the given WinConsoleInfo and out
+    pub fn new_with_consoleinfo(out: T, consoleinfo: WinConsoleInfo) -> WinConsole<T> {
+        WinConsole {
+            buf: out,
+            def_foreground: consoleinfo.def_foreground,
+            def_background: consoleinfo.def_background,
+            foreground: consoleinfo.foreground,
+            background: consoleinfo.background,
+        }
+    }
+
     /// Returns `Err` whenever the terminal cannot be created for some
     /// reason.
     pub fn new(out: T) -> io::Result<WinConsole<T>> {
-        let fg;
-        let bg;
-        let handle = conout()?;
-        unsafe {
-            let mut buffer_info = ::std::mem::uninitialized();
-            if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) != 0 {
-                fg = bits_to_color(buffer_info.wAttributes);
-                bg = bits_to_color(buffer_info.wAttributes >> 4);
-            } else {
-                return Err(io::Error::last_os_error());
-            }
-        }
-        Ok(WinConsole {
-            buf: out,
-            def_foreground: fg,
-            def_background: bg,
-            foreground: fg,
-            background: bg,
-        })
+        let consoleinfo = WinConsoleInfo::from_env()?;
+        Ok(Self::new_with_consoleinfo(out, consoleinfo))
     }
 }
 
