@@ -24,7 +24,7 @@ use Result;
 use Terminal;
 use color;
 
-use win::winapi::um::wincon::{SetConsoleCursorPosition, SetConsoleTextAttribute};
+use win::winapi::um::wincon::{SetConsoleCursorPosition, SetConsoleTextAttribute, BACKGROUND_INTENSITY};
 use win::winapi::um::wincon::{FillConsoleOutputCharacterW, GetConsoleScreenBufferInfo, COORD};
 use win::winapi::um::wincon::FillConsoleOutputAttribute;
 use win::winapi::shared::minwindef::{DWORD, WORD};
@@ -40,6 +40,9 @@ pub struct WinConsoleInfo {
     def_background: color::Color,
     foreground: color::Color,
     background: color::Color,
+    reverse: bool,
+    secure: bool,
+    standout: bool,
 }
 
 /// A Terminal implementation which uses the Win32 Console API.
@@ -161,6 +164,9 @@ impl WinConsoleInfo {
             def_background: bg,
             foreground: fg,
             background: bg,
+            reverse: false,
+            secure: false,
+            standout: false,
         })
     }
 }
@@ -169,9 +175,28 @@ impl<T: Write + Send> WinConsole<T> {
     fn apply(&mut self) -> io::Result<()> {
         let out = conout()?;
         let _unused = self.buf.flush();
+
+        let (mut fg, bg) = if self.info.reverse {
+            (self.info.background, self.info.foreground)
+        } else {
+            (self.info.foreground, self.info.background)
+        };
+
+        if self.info.secure {
+            fg  = bg;
+        }
+
         let mut accum: WORD = 0;
-        accum |= color_to_bits(self.info.foreground);
-        accum |= color_to_bits(self.info.background) << 4;
+
+        accum |= color_to_bits(fg);
+        accum |= color_to_bits(bg) << 4;
+
+        if self.info.standout {
+            accum |= BACKGROUND_INTENSITY;
+        } else {
+            accum &= BACKGROUND_INTENSITY ^ 0xFF;
+        }
+
         unsafe {
             SetConsoleTextAttribute(*out, accum);
         }
@@ -233,15 +258,32 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
                 self.apply()?;
                 Ok(())
             }
+            Attr::Reverse => {
+                self.info.reverse = true;
+                self.apply()?;
+                Ok(())
+            }
+            Attr::Secure => {
+                self.info.secure = true;
+                self.apply()?;
+                Ok(())
+            }
+            Attr::Standout(v) => {
+                self.info.standout = v;
+                self.apply()?;
+                Ok(())
+            }
             _ => Err(Error::NotSupported),
         }
     }
 
     fn supports_attr(&self, attr: Attr) -> bool {
-        // it claims support for underscore and reverse video, but I can't get
-        // it to do anything -cmr
         match attr {
-            Attr::ForegroundColor(_) | Attr::BackgroundColor(_) => true,
+            Attr::ForegroundColor(_)
+            | Attr::BackgroundColor(_)
+            | Attr::Standout(_)
+            | Attr::Reverse
+            | Attr::Secure => true,
             _ => false,
         }
     }
@@ -249,6 +291,9 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
     fn reset(&mut self) -> Result<()> {
         self.info.foreground = self.info.def_foreground;
         self.info.background = self.info.def_background;
+        self.info.reverse = false;
+        self.info.secure = false;
+        self.info.standout = false;
         self.apply()?;
 
         Ok(())
