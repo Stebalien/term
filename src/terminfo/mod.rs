@@ -18,6 +18,10 @@ use std::io;
 use std::io::BufReader;
 use std::path::Path;
 
+
+#[cfg(windows)]
+use win;
+
 use Attr;
 use color;
 use Terminal;
@@ -67,6 +71,18 @@ impl TermInfo {
                 }
             })
         });
+
+        #[cfg(windows)]
+        {
+            if term_name.is_none() && win::conout_supports_ansi() {
+                // Microsoft people don't seem to be okay with pretending to be xterm:
+                // https://github.com/Microsoft/WSL/issues/1446
+                // We have to ship xterm's terminfo file since the database
+                // is not shipped with Windows
+                return TermInfo::from_bytes(include_bytes!("../../assets/xterm-256color"));
+            }
+        }
+
         if let Some(term_name) = term_name {
             return TermInfo::from_name(term_name);
         } else {
@@ -120,6 +136,12 @@ impl TermInfo {
     fn _from_path(path: &Path) -> Result<TermInfo> {
         let file = File::open(path).map_err(::Error::Io)?;
         let mut reader = BufReader::new(file);
+        parse(&mut reader, false)
+    }
+
+    // Get TermInfo from a byte slice directly
+    fn from_bytes(bytes: &[u8]) -> Result<TermInfo> {
+        let mut reader = BufReader::new(bytes);
         parse(&mut reader, false)
     }
 
