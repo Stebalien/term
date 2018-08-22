@@ -139,6 +139,7 @@ impl TermInfo {
         parse(&mut reader, false)
     }
 
+    #[cfg(windows)]
     // Get TermInfo from a byte slice directly
     fn from_bytes(bytes: &[u8]) -> Result<TermInfo> {
         let mut reader = BufReader::new(bytes);
