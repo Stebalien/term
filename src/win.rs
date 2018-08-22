@@ -24,7 +24,9 @@ use Result;
 use Terminal;
 use color;
 
-use win::winapi::um::wincon::{SetConsoleCursorPosition, SetConsoleTextAttribute, BACKGROUND_INTENSITY};
+use win::winapi::um::wincon::{SetConsoleCursorPosition, SetConsoleTextAttribute};
+use win::winapi::um::consoleapi::{GetConsoleMode, SetConsoleMode};
+use win::winapi::um::wincon::{ENABLE_VIRTUAL_TERMINAL_PROCESSING, BACKGROUND_INTENSITY};
 use win::winapi::um::wincon::{FillConsoleOutputCharacterW, GetConsoleScreenBufferInfo, COORD};
 use win::winapi::um::wincon::FillConsoleOutputAttribute;
 use win::winapi::shared::minwindef::{DWORD, WORD};
@@ -116,8 +118,7 @@ impl Deref for HandleWrapper {
     }
 }
 
-// Just get a handle to the current console buffer whatever it is
-fn conout() -> io::Result<HandleWrapper> {
+fn conout_with_flag(flag: Option<DWORD>) -> io::Result<HandleWrapper> {
     let name = b"CONOUT$\0";
     let handle = unsafe {
         CreateFileA(
@@ -133,8 +134,30 @@ fn conout() -> io::Result<HandleWrapper> {
     if handle == INVALID_HANDLE_VALUE {
         Err(io::Error::last_os_error())
     } else {
+        if let Some(flag) = flag {
+            let mut curr_mode: DWORD = 0;
+            unsafe {
+                if GetConsoleMode(handle, &mut curr_mode) == 0 {
+                    return Err(io::Error::last_os_error());
+                }
+
+                if SetConsoleMode(handle, curr_mode | flag) == 0 {
+                    return Err(io::Error::last_os_error());
+                }
+            }
+        }
         Ok(HandleWrapper::new(handle))
     }
+}
+
+/// Check if console supports ansi codes (should succeed on Windows 10)
+pub fn conout_supports_ansi() -> bool {
+    conout_with_flag(Some(ENABLE_VIRTUAL_TERMINAL_PROCESSING)).is_ok()
+}
+
+// Just get a handle to the current console buffer whatever it is
+fn conout() -> io::Result<HandleWrapper> {
+    conout_with_flag(None)
 }
 
 // This test will only pass if it is running in an actual console, probably
