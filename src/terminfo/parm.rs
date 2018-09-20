@@ -18,6 +18,7 @@ use std::iter::repeat;
 #[derive(Clone, Copy, PartialEq)]
 enum States {
     Nothing,
+    Delay,
     Percent,
     SetVar,
     GetVar,
@@ -164,8 +165,16 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
             Nothing => {
                 if cur == '%' {
                     state = Percent;
+                } else if cur == '$' {
+                    state = Delay;
                 } else {
                     output.push(c);
+                }
+            }
+            Delay => {
+                old_state = Nothing;
+                if cur == '>' {
+                    state = Nothing;
                 }
             }
             Percent => {
