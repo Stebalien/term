@@ -18,6 +18,10 @@ use std::io;
 use std::io::BufReader;
 use std::path::Path;
 
+
+#[cfg(windows)]
+use win;
+
 use Attr;
 use color;
 use Terminal;
@@ -67,6 +71,17 @@ impl TermInfo {
                 }
             })
         });
+
+        #[cfg(windows)]
+        {
+            if term_name.is_none() && win::conout_supports_ansi() {
+                // Microsoft people seem to be fine with pretending to be xterm:
+                // https://github.com/Microsoft/WSL/issues/1446
+                // The basic ANSI fallback terminal will be uses.
+                return TermInfo::from_name("xterm");
+            }
+        }
+
         if let Some(term_name) = term_name {
             return TermInfo::from_name(term_name);
         } else {
