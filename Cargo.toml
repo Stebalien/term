@@ -12,6 +12,7 @@ description = """
 A terminal formatting library
 """
 categories = ["command-line-interface"]
+exclude = ["/scripts/*", "/.travis.yml", "/appveyor.yml"]
 
 [badges]
 travis-ci = { repository = "Stebalien/term" }
