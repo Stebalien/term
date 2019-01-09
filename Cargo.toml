@@ -23,7 +23,7 @@ byteorder = "1.2.1"
 dirs = "1.0.2"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3", features = ["wincon", "handleapi", "fileapi"] }
+winapi = { version = "0.3", features = ["consoleapi", "wincon", "handleapi", "fileapi"] }
 
 [features]
 default=[]
