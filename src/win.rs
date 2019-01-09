@@ -14,26 +14,25 @@
 
 extern crate winapi;
 
-use std::io::prelude::*;
+use color;
 use std::io;
+use std::io::prelude::*;
 use std::ops::Deref;
 use std::ptr;
 use Attr;
 use Error;
 use Result;
 use Terminal;
-use color;
 
-use win::winapi::um::wincon::{SetConsoleCursorPosition, SetConsoleTextAttribute};
-use win::winapi::um::consoleapi::{GetConsoleMode, SetConsoleMode};
-use win::winapi::um::wincon::{ENABLE_VIRTUAL_TERMINAL_PROCESSING, BACKGROUND_INTENSITY};
-use win::winapi::um::wincon::{FillConsoleOutputCharacterW, GetConsoleScreenBufferInfo, COORD};
-use win::winapi::um::wincon::FillConsoleOutputAttribute;
 use win::winapi::shared::minwindef::{DWORD, WORD};
-use win::winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
+use win::winapi::um::consoleapi::{GetConsoleMode, SetConsoleMode};
 use win::winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
+use win::winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
+use win::winapi::um::wincon::FillConsoleOutputAttribute;
+use win::winapi::um::wincon::{FillConsoleOutputCharacterW, GetConsoleScreenBufferInfo, COORD};
+use win::winapi::um::wincon::{SetConsoleCursorPosition, SetConsoleTextAttribute};
+use win::winapi::um::wincon::{BACKGROUND_INTENSITY, ENABLE_VIRTUAL_TERMINAL_PROCESSING};
 use win::winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE, HANDLE};
-
 
 /// Console info which can be used by a Terminal implementation
 /// which uses the Win32 Console API.
@@ -118,7 +117,8 @@ impl Deref for HandleWrapper {
     }
 }
 
-fn conout_with_flag(flag: Option<DWORD>) -> io::Result<HandleWrapper> {
+/// Just get a handle to the current console buffer whatever it is
+fn conout() -> io::Result<HandleWrapper> {
     let name = b"CONOUT$\0";
     let handle = unsafe {
         CreateFileA(
@@ -134,34 +134,27 @@ fn conout_with_flag(flag: Option<DWORD>) -> io::Result<HandleWrapper> {
     if handle == INVALID_HANDLE_VALUE {
         Err(io::Error::last_os_error())
     } else {
-        if let Some(flag) = flag {
-            let mut curr_mode: DWORD = 0;
-            unsafe {
-                if GetConsoleMode(handle, &mut curr_mode) == 0 {
-                    let err = Err(io::Error::last_os_error());
-                    drop(HandleWrapper::new(handle));
-                    return err;
-                }
-
-                if SetConsoleMode(handle, curr_mode | flag) == 0 {
-                    let err = Err(io::Error::last_os_error());
-                    drop(HandleWrapper::new(handle));
-                    return err;
-                }
-            }
-        }
         Ok(HandleWrapper::new(handle))
     }
 }
 
-/// Check if console supports ansi codes (should succeed on Windows 10)
-pub fn conout_supports_ansi() -> bool {
-    conout_with_flag(Some(ENABLE_VIRTUAL_TERMINAL_PROCESSING)).is_ok()
+unsafe fn set_flag(handle: HANDLE, flag: DWORD) -> io::Result<()> {
+    let mut curr_mode: DWORD = 0;
+    if GetConsoleMode(handle, &mut curr_mode) == 0 {
+        return Err(io::Error::last_os_error());
+    }
+
+    if SetConsoleMode(handle, curr_mode | flag) == 0 {
+        return Err(io::Error::last_os_error());
+    }
+    return Ok(());
 }
 
-// Just get a handle to the current console buffer whatever it is
-fn conout() -> io::Result<HandleWrapper> {
-    conout_with_flag(None)
+/// Check if console supports ansi codes (should succeed on Windows 10)
+pub fn supports_ansi() -> bool {
+    conout()
+        .and_then(|handle| unsafe { set_flag(*handle, ENABLE_VIRTUAL_TERMINAL_PROCESSING) })
+        .is_ok()
 }
 
 // This test will only pass if it is running in an actual console, probably
@@ -210,7 +203,7 @@ impl<T: Write + Send> WinConsole<T> {
         };
 
         if self.info.secure {
-            fg  = bg;
+            fg = bg;
         }
 
         let mut accum: WORD = 0;
@@ -232,10 +225,7 @@ impl<T: Write + Send> WinConsole<T> {
 
     /// Create a new WinConsole with the given WinConsoleInfo and out
     pub fn new_with_consoleinfo(out: T, info: WinConsoleInfo) -> WinConsole<T> {
-        WinConsole {
-            buf: out,
-            info,
-        }
+        WinConsole { buf: out, info }
     }
 
     /// Returns `Err` whenever the terminal cannot be created for some

@@ -74,7 +74,7 @@ impl TermInfo {
 
         #[cfg(windows)]
         {
-            if term_name.is_none() && win::conout_supports_ansi() {
+            if term_name.is_none() && win::supports_ansi() {
                 // Microsoft people seem to be fine with pretending to be xterm:
                 // https://github.com/Microsoft/WSL/issues/1446
                 // The basic ANSI fallback terminal will be uses.
