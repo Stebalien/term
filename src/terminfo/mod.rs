@@ -139,7 +139,7 @@ impl TermInfo {
     }
 
     /// Retrieve a capability `cmd` and expand it with `params`, writing result to `out`.
-    pub fn apply_cap(&self, cmd: &str, params: &[Param], out: &mut io::Write) -> Result<()> {
+    pub fn apply_cap(&self, cmd: &str, params: &[Param], out: &mut dyn io::Write) -> Result<()> {
         match self.strings.get(cmd) {
             Some(cmd) => match expand(cmd, params, &mut Variables::new()) {
                 Ok(s) => {
@@ -153,7 +153,7 @@ impl TermInfo {
     }
 
     /// Write the reset string to `out`.
-    pub fn reset(&self, out: &mut io::Write) -> Result<()> {
+    pub fn reset(&self, out: &mut dyn io::Write) -> Result<()> {
         // are there any terminals that have color/attrs and not sgr0?
         // Try falling back to sgr, then op
         let cmd = match [
@@ -236,7 +236,7 @@ impl ::std::error::Error for Error {
         }
     }
 
-    fn cause(&self) -> Option<&::std::error::Error> {
+    fn cause(&self) -> Option<&dyn (::std::error::Error)> {
         match *self {
             NotUtf8(ref e) => Some(e),
             _ => None,

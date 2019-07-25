@@ -25,15 +25,15 @@ pub use terminfo::parser::names::*;
 // These are the orders ncurses uses in its compiled format (as of 5.9). Not
 // sure if portable.
 
-fn read_le_u16(r: &mut io::Read) -> io::Result<u32> {
+fn read_le_u16(r: &mut dyn io::Read) -> io::Result<u32> {
     return r.read_u16::<LittleEndian>().map(|i| i as u32);
 }
 
-fn read_le_u32(r: &mut io::Read) -> io::Result<u32> {
+fn read_le_u32(r: &mut dyn io::Read) -> io::Result<u32> {
     return r.read_u32::<LittleEndian>();
 }
 
-fn read_byte(r: &mut io::Read) -> io::Result<u8> {
+fn read_byte(r: &mut dyn io::Read) -> io::Result<u8> {
     match r.bytes().next() {
         Some(s) => s,
         None => Err(io::Error::new(io::ErrorKind::Other, "end of file")),
@@ -42,7 +42,7 @@ fn read_byte(r: &mut io::Read) -> io::Result<u8> {
 
 /// Parse a compiled terminfo entry, using long capability names if `longnames`
 /// is true
-pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
+pub fn parse(file: &mut dyn io::Read, longnames: bool) -> Result<TermInfo> {
     let (bnames, snames, nnames) = if longnames {
         (boolfnames, stringfnames, numfnames)
     } else {

@@ -104,7 +104,7 @@ impl ::std::error::Error for Error {
         }
     }
 
-    fn cause(&self) -> Option<&::std::error::Error> {
+    fn cause(&self) -> Option<&dyn (::std::error::Error)> {
         None
     }
 }
@@ -264,7 +264,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                             return Err(Error::StackUnderflow);
                         }
                     }
-                    ':' | '#' | ' ' | '.' | '0'...'9' => {
+                    ':' | '#' | ' ' | '.' | '0'..='9' => {
                         let mut flags = Flags::default();
                         let mut fstate = FormatState::Flags;
                         match cur {
@@ -272,7 +272,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                             '#' => flags.alternate = true,
                             ' ' => flags.space = true,
                             '.' => fstate = FormatState::Precision,
-                            '0'...'9' => {
+                            '0'..='9' => {
                                 flags.width = cur as usize - '0' as usize;
                                 fstate = FormatState::Width;
                             }
@@ -384,11 +384,11 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                     (FormatState::Flags, ' ') => {
                         flags.space = true;
                     }
-                    (FormatState::Flags, '0'...'9') => {
+                    (FormatState::Flags, '0'..='9') => {
                         flags.width = cur as usize - '0' as usize;
                         *fstate = FormatState::Width;
                     }
-                    (FormatState::Width, '0'...'9') => {
+                    (FormatState::Width, '0'..='9') => {
                         flags.width = match flags
                             .width
                             .checked_mul(10)
@@ -401,7 +401,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                     (FormatState::Width, '.') | (FormatState::Flags, '.') => {
                         *fstate = FormatState::Precision;
                     }
-                    (FormatState::Precision, '0'...'9') => {
+                    (FormatState::Precision, '0'..='9') => {
                         flags.precision = match flags
                             .precision
                             .checked_mul(10)
