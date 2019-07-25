@@ -19,7 +19,7 @@ use std::io::BufReader;
 use std::path::Path;
 
 #[cfg(windows)]
-use win;
+use crate::win;
 
 use self::parm::{expand, Param, Variables};
 use self::parser::compiled::parse;

@@ -12,27 +12,25 @@
 
 // FIXME (#13400): this is only a tiny fraction of the Windows console api
 
-extern crate winapi;
-
-use color;
+use crate::color;
 use std::io;
 use std::io::prelude::*;
 use std::ops::Deref;
 use std::ptr;
-use Attr;
-use Error;
-use Result;
-use Terminal;
+use crate::Attr;
+use crate::Error;
+use crate::Result;
+use crate::Terminal;
 
-use win::winapi::shared::minwindef::{DWORD, WORD};
-use win::winapi::um::consoleapi::{GetConsoleMode, SetConsoleMode};
-use win::winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
-use win::winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
-use win::winapi::um::wincon::FillConsoleOutputAttribute;
-use win::winapi::um::wincon::{FillConsoleOutputCharacterW, GetConsoleScreenBufferInfo, COORD};
-use win::winapi::um::wincon::{SetConsoleCursorPosition, SetConsoleTextAttribute};
-use win::winapi::um::wincon::{BACKGROUND_INTENSITY, ENABLE_VIRTUAL_TERMINAL_PROCESSING};
-use win::winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE, HANDLE};
+use winapi::shared::minwindef::{DWORD, WORD};
+use winapi::um::consoleapi::{GetConsoleMode, SetConsoleMode};
+use winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
+use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
+use winapi::um::wincon::FillConsoleOutputAttribute;
+use winapi::um::wincon::{FillConsoleOutputCharacterW, GetConsoleScreenBufferInfo, COORD};
+use winapi::um::wincon::{SetConsoleCursorPosition, SetConsoleTextAttribute};
+use winapi::um::wincon::{BACKGROUND_INTENSITY, ENABLE_VIRTUAL_TERMINAL_PROCESSING};
+use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE, HANDLE};
 
 /// Console info which can be used by a Terminal implementation
 /// which uses the Win32 Console API.
