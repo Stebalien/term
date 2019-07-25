@@ -115,7 +115,7 @@ pub struct Variables {
     /// Static variables A-Z
     sta: [Param; 26],
     /// Dynamic variables a-z
-    dyn: [Param; 26],
+    r#dyn: [Param; 26],
 }
 
 impl Variables {
@@ -313,7 +313,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                 } else if cur >= 'a' && cur <= 'z' {
                     if let Some(arg) = stack.pop() {
                         let idx = (cur as u8) - b'a';
-                        vars.dyn[idx as usize] = arg;
+                        vars.r#dyn[idx as usize] = arg;
                     } else {
                         return Err(Error::StackUnderflow);
                     }
@@ -327,7 +327,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                     stack.push(vars.sta[idx as usize].clone());
                 } else if cur >= 'a' && cur <= 'z' {
                     let idx = (cur as u8) - b'a';
-                    stack.push(vars.dyn[idx as usize].clone());
+                    stack.push(vars.r#dyn[idx as usize].clone());
                 } else {
                     return Err(Error::InvalidVariableName(cur));
                 }

@@ -22,10 +22,10 @@ use std::path::Path;
 #[cfg(windows)]
 use win;
 
-use Attr;
-use color;
-use Terminal;
-use Result;
+use crate::Attr;
+use crate::color;
+use crate::Terminal;
+use crate::Result;
 use self::searcher::get_dbpath_for_term;
 use self::parser::compiled::parse;
 use self::parm::{expand, Param, Variables};
@@ -85,7 +85,7 @@ impl TermInfo {
         if let Some(term_name) = term_name {
             return TermInfo::from_name(term_name);
         } else {
-            return Err(::Error::TermUnset);
+            return Err(crate::Error::TermUnset);
         }
     }
 
@@ -95,7 +95,7 @@ impl TermInfo {
             match TermInfo::from_path(&path) {
                 Ok(term) => return Ok(term),
                 // Skip IO Errors (e.g., permission denied).
-                Err(::Error::Io(_)) => {}
+                Err(crate::Error::Io(_)) => {}
                 // Don't ignore malformed terminfo databases.
                 Err(e) => return Err(e),
             }
@@ -118,7 +118,7 @@ impl TermInfo {
                 strings: strings,
             })
         } else {
-            Err(::Error::TerminfoEntryNotFound)
+            Err(crate::Error::TerminfoEntryNotFound)
         }
     }
 
@@ -133,7 +133,7 @@ impl TermInfo {
     // might do this for
     // us. Alas. )
     fn _from_path(path: &Path) -> Result<TermInfo> {
-        let file = File::open(path).map_err(::Error::Io)?;
+        let file = File::open(path).map_err(crate::Error::Io)?;
         let mut reader = BufReader::new(file);
         parse(&mut reader, false)
     }
@@ -148,7 +148,7 @@ impl TermInfo {
                 }
                 Err(e) => Err(e.into()),
             },
-            None => Err(::Error::NotSupported),
+            None => Err(crate::Error::NotSupported),
         }
     }
 
@@ -168,7 +168,7 @@ impl TermInfo {
                 Ok(cmd) => cmd,
                 Err(e) => return Err(e.into()),
             },
-            None => return Err(::Error::NotSupported),
+            None => return Err(crate::Error::NotSupported),
         };
         out.write_all(&cmd)?;
         Ok(())
@@ -289,7 +289,7 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
             return self.ti
                 .apply_cap("setaf", &[Param::Number(color as i32)], &mut self.out);
         }
-        Err(::Error::ColorOutOfRange)
+        Err(crate::Error::ColorOutOfRange)
     }
 
     fn bg(&mut self, color: color::Color) -> Result<()> {
@@ -298,7 +298,7 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
             return self.ti
                 .apply_cap("setab", &[Param::Number(color as i32)], &mut self.out);
         }
-        Err(::Error::ColorOutOfRange)
+        Err(crate::Error::ColorOutOfRange)
     }
 
     fn attr(&mut self, attr: Attr) -> Result<()> {

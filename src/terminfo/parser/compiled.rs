@@ -16,11 +16,11 @@ use std::io;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use terminfo::Error::*;
-use terminfo::TermInfo;
-use Result;
+use crate::terminfo::Error::*;
+use crate::terminfo::TermInfo;
+use crate::Result;
 
-pub use terminfo::parser::names::*;
+pub use crate::terminfo::parser::names::*;
 
 // These are the orders ncurses uses in its compiled format (as of 5.9). Not
 // sure if portable.
@@ -166,7 +166,7 @@ pub fn parse(file: &mut dyn io::Read, longnames: bool) -> Result<TermInfo> {
                     .position(|&b| b == 0);
                 match nulpos {
                     Some(len) => Ok((name, string_table[offset..offset + len].to_vec())),
-                    None => return Err(::Error::TerminfoParsing(StringsMissingNull)),
+                    None => return Err(crate::Error::TerminfoParsing(StringsMissingNull)),
                 }
             })
             .collect::<Result<HashMap<_, _>>>()?

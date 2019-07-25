@@ -70,7 +70,7 @@ extern crate dirs;
 
 use std::io::prelude::*;
 
-pub use terminfo::TerminfoTerminal;
+pub use crate::terminfo::TerminfoTerminal;
 #[cfg(windows)]
 pub use win::{WinConsole, WinConsoleInfo};
 
@@ -211,7 +211,7 @@ pub enum Error {
 // manually implemented because std::io::Error does not implement Eq/PartialEq
 impl std::cmp::PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
-        use Error::*;
+        use crate::Error::*;
         match *self {
             Io(_) => false,
             TerminfoParsing(ref inner1) => match *other {
@@ -256,7 +256,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         use std::error::Error;
-        if let ::Error::Io(ref e) = *self {
+        if let crate::Error::Io(ref e) = *self {
             write!(f, "{}", e)
         } else {
             f.write_str(self.description())
@@ -266,7 +266,7 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {
     fn description(&self) -> &str {
-        use Error::*;
+        use crate::Error::*;
         match *self {
             Io(ref io) => io.description(),
             TerminfoParsing(ref e) => e.description(),
