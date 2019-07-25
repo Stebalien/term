@@ -333,7 +333,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                 }
             }
             CharConstant => {
-                stack.push(Number(c as i32));
+                stack.push(Number(i32::from(c)));
                 state = CharClose;
             }
             CharClose => {

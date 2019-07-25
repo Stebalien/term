@@ -34,7 +34,7 @@ use self::Error::*;
 /// Returns true if the named terminal supports basic ANSI escape codes.
 fn is_ansi(name: &str) -> bool {
     // SORTED! We binary search this.
-    static ANSI_TERM_PREFIX: &'static [&'static str] = &[
+    static ANSI_TERM_PREFIX: &[&str] = &[
         "Eterm", "ansi", "eterm", "iterm", "konsole", "linux", "mrxvt", "msyscon", "rxvt",
         "screen", "tmux", "xterm",
     ];
@@ -83,9 +83,9 @@ impl TermInfo {
         }
 
         if let Some(term_name) = term_name {
-            return TermInfo::from_name(term_name);
+            TermInfo::from_name(term_name)
         } else {
-            return Err(crate::Error::TermUnset);
+            Err(crate::Error::TermUnset)
         }
     }
 
@@ -114,8 +114,8 @@ impl TermInfo {
             Ok(TermInfo {
                 names: vec![name.to_owned()],
                 bools: HashMap::new(),
-                numbers: numbers,
-                strings: strings,
+                numbers,
+                strings,
             })
         } else {
             Err(crate::Error::TerminfoEntryNotFound)
@@ -372,7 +372,7 @@ impl<T: Write> TerminfoTerminal<T> {
         };
 
         TerminfoTerminal {
-            out: out,
+            out,
             ti: terminfo,
             num_colors: nc as u32,
         }

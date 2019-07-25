@@ -1,7 +1,7 @@
 #![allow(non_upper_case_globals, missing_docs)]
 #![cfg_attr(rustfmt, rustfmt_skip)]
 
-pub static boolfnames: &'static [&'static str] = &["auto_left_margin",
+pub static boolfnames: &[&str] = &["auto_left_margin",
                                                    "auto_right_margin",
                                                    "no_esc_ctlc",
                                                    "ceol_standout_glitch",
@@ -46,13 +46,13 @@ pub static boolfnames: &'static [&'static str] = &["auto_left_margin",
                                                    "has_hardware_tabs",
                                                    "return_does_clr_eol"];
 
-pub static boolnames: &'static [&'static str] =
+pub static boolnames: &[&str] =
     &["bw", "am", "xsb", "xhp", "xenl", "eo", "gn", "hc", "km", "hs", "in", "db", "da", "mir",
       "msgr", "os", "eslok", "xt", "hz", "ul", "xon", "nxon", "mc5i", "chts", "nrrmc", "npc",
       "ndscr", "ccc", "bce", "hls", "xhpa", "crxm", "daisy", "xvpa", "sam", "cpix", "lpix",
       "OTbs", "OTns", "OTnc", "OTMT", "OTNL", "OTpt", "OTxr"];
 
-pub static numfnames: &'static [&'static str] = &["columns",
+pub static numfnames: &[&str] = &["columns",
                                                   "init_tabs",
                                                   "lines",
                                                   "lines_of_memory",
@@ -92,13 +92,13 @@ pub static numfnames: &'static [&'static str] = &["columns",
                                                   "horizontal_tab_delay",
                                                   "number_of_function_keys"];
 
-pub static numnames: &'static [&'static str] =
+pub static numnames: &[&str] =
     &["cols", "it", "lines", "lm", "xmc", "pb", "vt", "wsl", "nlab", "lh", "lw", "ma", "wnum",
       "colors", "pairs", "ncv", "bufsz", "spinv", "spinh", "maddr", "mjump", "mcs", "mls",
       "npins", "orc", "orl", "orhi", "orvi", "cps", "widcs", "btns", "bitwin", "bitype", "UTug",
       "OTdC", "OTdN", "OTdB", "OTdT", "OTkn"];
 
-pub static stringfnames: &'static [&'static str] = &["back_tab",
+pub static stringfnames: &[&str] = &["back_tab",
                                                      "bell",
                                                      "carriage_return",
                                                      "change_scroll_region",
@@ -513,7 +513,7 @@ pub static stringfnames: &'static [&'static str] = &["back_tab",
                                                      "memory_unlock",
                                                      "box_chars_1"];
 
-pub static stringnames: &'static [&'static str] =
+pub static stringnames: &[&str] =
     &["cbt", "bel", "cr", "csr", "tbc", "clear", "el", "ed", "hpa", "cmdch", "cup", "cud1",
       "home", "civis", "cub1", "mrcup", "cnorm", "cuf1", "ll", "cuu1", "cvvis", "dch1", "dl1",
       "dsl", "hd", "smacs", "blink", "bold", "smcup", "smdc", "dim", "smir", "invis", "prot",

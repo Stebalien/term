@@ -26,11 +26,11 @@ pub use crate::terminfo::parser::names::*;
 // sure if portable.
 
 fn read_le_u16(r: &mut dyn io::Read) -> io::Result<u32> {
-    return r.read_u16::<LittleEndian>().map(|i| i as u32);
+    r.read_u16::<LittleEndian>().map(u32::from)
 }
 
 fn read_le_u32(r: &mut dyn io::Read) -> io::Result<u32> {
-    return r.read_u32::<LittleEndian>();
+    r.read_u32::<LittleEndian>()
 }
 
 fn read_byte(r: &mut dyn io::Read) -> io::Result<u8> {
@@ -166,7 +166,7 @@ pub fn parse(file: &mut dyn io::Read, longnames: bool) -> Result<TermInfo> {
                     .position(|&b| b == 0);
                 match nulpos {
                     Some(len) => Ok((name, string_table[offset..offset + len].to_vec())),
-                    None => return Err(crate::Error::TerminfoParsing(StringsMissingNull)),
+                    None => Err(crate::Error::TerminfoParsing(StringsMissingNull)),
                 }
             })
             .collect::<Result<HashMap<_, _>>>()?
