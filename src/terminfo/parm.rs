@@ -221,18 +221,20 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                         }
                     }
                     '=' | '>' | '<' | 'A' | 'O' => match (stack.pop(), stack.pop()) {
-                        (Some(Number(y)), Some(Number(x))) => stack.push(Number(if match cur {
-                            '=' => x == y,
-                            '<' => x < y,
-                            '>' => x > y,
-                            'A' => x > 0 && y > 0,
-                            'O' => x > 0 || y > 0,
-                            _ => unreachable!("logic error"),
-                        } {
-                            1
-                        } else {
-                            0
-                        })),
+                        (Some(Number(y)), Some(Number(x))) => stack.push(Number(
+                            if match cur {
+                                '=' => x == y,
+                                '<' => x < y,
+                                '>' => x > y,
+                                'A' => x > 0 && y > 0,
+                                'O' => x > 0 || y > 0,
+                                _ => unreachable!("logic error"),
+                            } {
+                                1
+                            } else {
+                                0
+                            },
+                        )),
                         (Some(_), Some(_)) => return Err(Error::TypeMismatch),
                         _ => return Err(Error::StackUnderflow),
                     },
@@ -297,9 +299,10 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                 // params are 1-indexed
                 stack.push(
                     mparams[match cur.to_digit(10) {
-                                Some(d) => d as usize - 1,
-                                None => return Err(Error::InvalidParameterIndex(cur)),
-                            }].clone(),
+                        Some(d) => d as usize - 1,
+                        None => return Err(Error::InvalidParameterIndex(cur)),
+                    }]
+                    .clone(),
                 );
             }
             SetVar => {
@@ -346,7 +349,8 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                     stack.push(Number(i));
                     state = Nothing;
                 } else if let Some(digit) = cur.to_digit(10) {
-                    match i.checked_mul(10)
+                    match i
+                        .checked_mul(10)
                         .and_then(|i_ten| i_ten.checked_add(digit as i32))
                     {
                         Some(i) => {
@@ -535,7 +539,8 @@ fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8>, Error> {
                     }
                 }
                 String => return Err(Error::TypeMismatch),
-            }.into_bytes()
+            }
+            .into_bytes()
         }
         Words(s) => match op {
             String => {
@@ -564,8 +569,8 @@ fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8>, Error> {
 
 #[cfg(test)]
 mod test {
-    use super::{expand, Variables};
     use super::Param::{self, Number, Words};
+    use super::{expand, Variables};
     use std::result::Result::Ok;
 
     #[test]

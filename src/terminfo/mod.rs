@@ -13,23 +13,22 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
-
 
 #[cfg(windows)]
 use win;
 
-use crate::Attr;
-use crate::color;
-use crate::Terminal;
-use crate::Result;
-use self::searcher::get_dbpath_for_term;
-use self::parser::compiled::parse;
 use self::parm::{expand, Param, Variables};
+use self::parser::compiled::parse;
+use self::searcher::get_dbpath_for_term;
 use self::Error::*;
+use crate::color;
+use crate::Attr;
+use crate::Result;
+use crate::Terminal;
 
 /// Returns true if the named terminal supports basic ANSI escape codes.
 fn is_ansi(name: &str) -> bool {
@@ -160,9 +159,10 @@ impl TermInfo {
             ("sgr0", &[] as &[Param]),
             ("sgr", &[Param::Number(0)]),
             ("op", &[]),
-        ].iter()
-            .filter_map(|&(cap, params)| self.strings.get(cap).map(|c| (c, params)))
-            .next()
+        ]
+        .iter()
+        .filter_map(|&(cap, params)| self.strings.get(cap).map(|c| (c, params)))
+        .next()
         {
             Some((op, params)) => match expand(op, params, &mut Variables::new()) {
                 Ok(cmd) => cmd,
@@ -286,7 +286,8 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
     fn fg(&mut self, color: color::Color) -> Result<()> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
-            return self.ti
+            return self
+                .ti
                 .apply_cap("setaf", &[Param::Number(color as i32)], &mut self.out);
         }
         Err(crate::Error::ColorOutOfRange)
@@ -295,7 +296,8 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
     fn bg(&mut self, color: color::Color) -> Result<()> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
-            return self.ti
+            return self
+                .ti
                 .apply_cap("setab", &[Param::Number(color as i32)], &mut self.out);
         }
         Err(crate::Error::ColorOutOfRange)

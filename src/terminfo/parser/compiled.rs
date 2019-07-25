@@ -11,8 +11,8 @@
 //! ncurses-compatible compiled terminfo format parsing (term(5))
 
 use std::collections::HashMap;
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
@@ -69,7 +69,7 @@ pub fn parse(file: &mut dyn io::Read, longnames: bool) -> Result<TermInfo> {
                 -1 => 0,
                 _ => return Err(InvalidLength.into()),
             }
-        }}
+        }};
     }
 
     let names_bytes = read_nonneg!();
@@ -96,7 +96,8 @@ pub fn parse(file: &mut dyn io::Read, longnames: bool) -> Result<TermInfo> {
 
     // don't read NUL
     let mut bytes = Vec::new();
-    file.take((names_bytes - 1) as u64).read_to_end(&mut bytes)?;
+    file.take((names_bytes - 1) as u64)
+        .read_to_end(&mut bytes)?;
     let names_str = match String::from_utf8(bytes) {
         Ok(s) => s,
         Err(e) => return Err(NotUtf8(e.utf8_error()).into()),

@@ -65,9 +65,6 @@
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
 
-
-
-
 use std::io::prelude::*;
 
 pub use crate::terminfo::TerminfoTerminal;
