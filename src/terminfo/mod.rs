@@ -13,28 +13,27 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
 use std::io::BufReader;
 use std::path::Path;
 
-
 #[cfg(windows)]
-use win;
+use crate::win;
 
-use Attr;
-use color;
-use Terminal;
-use Result;
-use self::searcher::get_dbpath_for_term;
-use self::parser::compiled::parse;
 use self::parm::{expand, Param, Variables};
+use self::parser::compiled::parse;
+use self::searcher::get_dbpath_for_term;
 use self::Error::*;
+use crate::color;
+use crate::Attr;
+use crate::Result;
+use crate::Terminal;
 
 /// Returns true if the named terminal supports basic ANSI escape codes.
 fn is_ansi(name: &str) -> bool {
     // SORTED! We binary search this.
-    static ANSI_TERM_PREFIX: &'static [&'static str] = &[
+    static ANSI_TERM_PREFIX: &[&str] = &[
         "Eterm", "ansi", "eterm", "iterm", "konsole", "linux", "mrxvt", "msyscon", "rxvt",
         "screen", "tmux", "xterm",
     ];
@@ -83,9 +82,9 @@ impl TermInfo {
         }
 
         if let Some(term_name) = term_name {
-            return TermInfo::from_name(term_name);
+            TermInfo::from_name(term_name)
         } else {
-            return Err(::Error::TermUnset);
+            Err(crate::Error::TermUnset)
         }
     }
 
@@ -95,7 +94,7 @@ impl TermInfo {
             match TermInfo::from_path(&path) {
                 Ok(term) => return Ok(term),
                 // Skip IO Errors (e.g., permission denied).
-                Err(::Error::Io(_)) => {}
+                Err(crate::Error::Io(_)) => {}
                 // Don't ignore malformed terminfo databases.
                 Err(e) => return Err(e),
             }
@@ -118,7 +117,7 @@ impl TermInfo {
                 strings: strings,
             })
         } else {
-            Err(::Error::TerminfoEntryNotFound)
+            Err(crate::Error::TerminfoEntryNotFound)
         }
     }
 
@@ -133,13 +132,13 @@ impl TermInfo {
     // might do this for
     // us. Alas. )
     fn _from_path(path: &Path) -> Result<TermInfo> {
-        let file = File::open(path).map_err(::Error::Io)?;
+        let file = File::open(path).map_err(crate::Error::Io)?;
         let mut reader = BufReader::new(file);
         parse(&mut reader, false)
     }
 
     /// Retrieve a capability `cmd` and expand it with `params`, writing result to `out`.
-    pub fn apply_cap(&self, cmd: &str, params: &[Param], out: &mut io::Write) -> Result<()> {
+    pub fn apply_cap(&self, cmd: &str, params: &[Param], out: &mut dyn io::Write) -> Result<()> {
         match self.strings.get(cmd) {
             Some(cmd) => match expand(cmd, params, &mut Variables::new()) {
                 Ok(s) => {
@@ -148,27 +147,28 @@ impl TermInfo {
                 }
                 Err(e) => Err(e.into()),
             },
-            None => Err(::Error::NotSupported),
+            None => Err(crate::Error::NotSupported),
         }
     }
 
     /// Write the reset string to `out`.
-    pub fn reset(&self, out: &mut io::Write) -> Result<()> {
+    pub fn reset(&self, out: &mut dyn io::Write) -> Result<()> {
         // are there any terminals that have color/attrs and not sgr0?
         // Try falling back to sgr, then op
         let cmd = match [
             ("sgr0", &[] as &[Param]),
             ("sgr", &[Param::Number(0)]),
             ("op", &[]),
-        ].iter()
-            .filter_map(|&(cap, params)| self.strings.get(cap).map(|c| (c, params)))
-            .next()
+        ]
+        .iter()
+        .filter_map(|&(cap, params)| self.strings.get(cap).map(|c| (c, params)))
+        .next()
         {
             Some((op, params)) => match expand(op, params, &mut Variables::new()) {
                 Ok(cmd) => cmd,
                 Err(e) => return Err(e.into()),
             },
-            None => return Err(::Error::NotSupported),
+            None => return Err(crate::Error::NotSupported),
         };
         out.write_all(&cmd)?;
         Ok(())
@@ -205,7 +205,7 @@ pub enum Error {
 }
 
 impl ::std::fmt::Display for Error {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         use std::error::Error;
         match *self {
             NotUtf8(e) => write!(f, "{}", e),
@@ -236,7 +236,7 @@ impl ::std::error::Error for Error {
         }
     }
 
-    fn cause(&self) -> Option<&::std::error::Error> {
+    fn cause(&self) -> Option<&dyn (::std::error::Error)> {
         match *self {
             NotUtf8(ref e) => Some(e),
             _ => None,
@@ -286,19 +286,21 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
     fn fg(&mut self, color: color::Color) -> Result<()> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
-            return self.ti
+            return self
+                .ti
                 .apply_cap("setaf", &[Param::Number(color as i32)], &mut self.out);
         }
-        Err(::Error::ColorOutOfRange)
+        Err(crate::Error::ColorOutOfRange)
     }
 
     fn bg(&mut self, color: color::Color) -> Result<()> {
         let color = self.dim_if_necessary(color);
         if self.num_colors > color {
-            return self.ti
+            return self
+                .ti
                 .apply_cap("setab", &[Param::Number(color as i32)], &mut self.out);
         }
-        Err(::Error::ColorOutOfRange)
+        Err(crate::Error::ColorOutOfRange)
     }
 
     fn attr(&mut self, attr: Attr) -> Result<()> {

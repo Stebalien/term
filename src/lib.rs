@@ -65,12 +65,9 @@
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
 
-extern crate byteorder;
-extern crate dirs;
-
 use std::io::prelude::*;
 
-pub use terminfo::TerminfoTerminal;
+pub use crate::terminfo::TerminfoTerminal;
 #[cfg(windows)]
 pub use win::{WinConsole, WinConsoleInfo};
 
@@ -82,9 +79,9 @@ pub mod terminfo;
 mod win;
 
 /// Alias for stdout terminals.
-pub type StdoutTerminal = Terminal<Output = Stdout> + Send;
+pub type StdoutTerminal = dyn Terminal<Output = Stdout> + Send;
 /// Alias for stderr terminals.
-pub type StderrTerminal = Terminal<Output = Stderr> + Send;
+pub type StderrTerminal = dyn Terminal<Output = Stderr> + Send;
 
 #[cfg(not(windows))]
 /// Return a Terminal wrapping stdout, or None if a terminal couldn't be
@@ -211,7 +208,7 @@ pub enum Error {
 // manually implemented because std::io::Error does not implement Eq/PartialEq
 impl std::cmp::PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
-        use Error::*;
+        use crate::Error::*;
         match *self {
             Io(_) => false,
             TerminfoParsing(ref inner1) => match *other {
@@ -254,9 +251,9 @@ impl std::cmp::PartialEq for Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use std::error::Error;
-        if let ::Error::Io(ref e) = *self {
+        if let crate::Error::Io(ref e) = *self {
             write!(f, "{}", e)
         } else {
             f.write_str(self.description())
@@ -266,7 +263,7 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {
     fn description(&self) -> &str {
-        use Error::*;
+        use crate::Error::*;
         match *self {
             Io(ref io) => io.description(),
             TerminfoParsing(ref e) => e.description(),
@@ -280,7 +277,7 @@ impl std::error::Error for Error {
         }
     }
 
-    fn cause(&self) -> Option<&std::error::Error> {
+    fn cause(&self) -> Option<&dyn std::error::Error> {
         match *self {
             Error::Io(ref io) => Some(io),
             Error::TerminfoParsing(ref e) => Some(e),

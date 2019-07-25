@@ -11,29 +11,29 @@
 //! ncurses-compatible compiled terminfo format parsing (term(5))
 
 use std::collections::HashMap;
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
 
 use byteorder::{LittleEndian, ReadBytesExt};
 
-use terminfo::Error::*;
-use terminfo::TermInfo;
-use Result;
+use crate::terminfo::Error::*;
+use crate::terminfo::TermInfo;
+use crate::Result;
 
-pub use terminfo::parser::names::*;
+pub use crate::terminfo::parser::names::*;
 
 // These are the orders ncurses uses in its compiled format (as of 5.9). Not
 // sure if portable.
 
-fn read_le_u16(r: &mut io::Read) -> io::Result<u32> {
-    return r.read_u16::<LittleEndian>().map(|i| i as u32);
+fn read_le_u16(r: &mut dyn io::Read) -> io::Result<u32> {
+    r.read_u16::<LittleEndian>().map(u32::from)
 }
 
-fn read_le_u32(r: &mut io::Read) -> io::Result<u32> {
-    return r.read_u32::<LittleEndian>();
+fn read_le_u32(r: &mut dyn io::Read) -> io::Result<u32> {
+    r.read_u32::<LittleEndian>()
 }
 
-fn read_byte(r: &mut io::Read) -> io::Result<u8> {
+fn read_byte(r: &mut dyn io::Read) -> io::Result<u8> {
     match r.bytes().next() {
         Some(s) => s,
         None => Err(io::Error::new(io::ErrorKind::Other, "end of file")),
@@ -42,7 +42,7 @@ fn read_byte(r: &mut io::Read) -> io::Result<u8> {
 
 /// Parse a compiled terminfo entry, using long capability names if `longnames`
 /// is true
-pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
+pub fn parse(file: &mut dyn io::Read, longnames: bool) -> Result<TermInfo> {
     let (bnames, snames, nnames) = if longnames {
         (boolfnames, stringfnames, numfnames)
     } else {
@@ -69,7 +69,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
                 -1 => 0,
                 _ => return Err(InvalidLength.into()),
             }
-        }}
+        }};
     }
 
     let names_bytes = read_nonneg!();
@@ -96,7 +96,8 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
 
     // don't read NUL
     let mut bytes = Vec::new();
-    file.take((names_bytes - 1) as u64).read_to_end(&mut bytes)?;
+    file.take((names_bytes - 1) as u64)
+        .read_to_end(&mut bytes)?;
     let names_str = match String::from_utf8(bytes) {
         Ok(s) => s,
         Err(e) => return Err(NotUtf8(e.utf8_error()).into()),
@@ -166,7 +167,7 @@ pub fn parse(file: &mut io::Read, longnames: bool) -> Result<TermInfo> {
                     .position(|&b| b == 0);
                 match nulpos {
                     Some(len) => Ok((name, string_table[offset..offset + len].to_vec())),
-                    None => return Err(::Error::TerminfoParsing(StringsMissingNull)),
+                    None => Err(crate::Error::TerminfoParsing(StringsMissingNull)),
                 }
             })
             .collect::<Result<HashMap<_, _>>>()?

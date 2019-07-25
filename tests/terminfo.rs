@@ -1,10 +1,8 @@
-extern crate term;
-
+use std::fs;
+use std::io;
 use term::terminfo::TermInfo;
 use term::terminfo::TerminfoTerminal;
 use term::Terminal;
-use std::fs;
-use std::io;
 
 #[test]
 fn test_parse() {

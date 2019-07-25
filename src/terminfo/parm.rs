@@ -81,7 +81,7 @@ pub enum Error {
 }
 
 impl ::std::fmt::Display for Error {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         use std::error::Error;
         f.write_str(self.description())
     }
@@ -104,7 +104,7 @@ impl ::std::error::Error for Error {
         }
     }
 
-    fn cause(&self) -> Option<&::std::error::Error> {
+    fn cause(&self) -> Option<&dyn (::std::error::Error)> {
         None
     }
 }
@@ -113,9 +113,9 @@ impl ::std::error::Error for Error {
 #[derive(Default)]
 pub struct Variables {
     /// Static variables A-Z
-    sta: [Param; 26],
+    sta_vars: [Param; 26],
     /// Dynamic variables a-z
-    dyn: [Param; 26],
+    dyn_vars: [Param; 26],
 }
 
 impl Variables {
@@ -221,18 +221,20 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                         }
                     }
                     '=' | '>' | '<' | 'A' | 'O' => match (stack.pop(), stack.pop()) {
-                        (Some(Number(y)), Some(Number(x))) => stack.push(Number(if match cur {
-                            '=' => x == y,
-                            '<' => x < y,
-                            '>' => x > y,
-                            'A' => x > 0 && y > 0,
-                            'O' => x > 0 || y > 0,
-                            _ => unreachable!("logic error"),
-                        } {
-                            1
-                        } else {
-                            0
-                        })),
+                        (Some(Number(y)), Some(Number(x))) => stack.push(Number(
+                            if match cur {
+                                '=' => x == y,
+                                '<' => x < y,
+                                '>' => x > y,
+                                'A' => x > 0 && y > 0,
+                                'O' => x > 0 || y > 0,
+                                _ => unreachable!("logic error"),
+                            } {
+                                1
+                            } else {
+                                0
+                            },
+                        )),
                         (Some(_), Some(_)) => return Err(Error::TypeMismatch),
                         _ => return Err(Error::StackUnderflow),
                     },
@@ -264,7 +266,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                             return Err(Error::StackUnderflow);
                         }
                     }
-                    ':' | '#' | ' ' | '.' | '0'...'9' => {
+                    ':' | '#' | ' ' | '.' | '0'..='9' => {
                         let mut flags = Flags::default();
                         let mut fstate = FormatState::Flags;
                         match cur {
@@ -272,7 +274,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                             '#' => flags.alternate = true,
                             ' ' => flags.space = true,
                             '.' => fstate = FormatState::Precision,
-                            '0'...'9' => {
+                            '0'..='9' => {
                                 flags.width = cur as usize - '0' as usize;
                                 fstate = FormatState::Width;
                             }
@@ -297,23 +299,24 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                 // params are 1-indexed
                 stack.push(
                     mparams[match cur.to_digit(10) {
-                                Some(d) => d as usize - 1,
-                                None => return Err(Error::InvalidParameterIndex(cur)),
-                            }].clone(),
+                        Some(d) => d as usize - 1,
+                        None => return Err(Error::InvalidParameterIndex(cur)),
+                    }]
+                    .clone(),
                 );
             }
             SetVar => {
                 if cur >= 'A' && cur <= 'Z' {
                     if let Some(arg) = stack.pop() {
                         let idx = (cur as u8) - b'A';
-                        vars.sta[idx as usize] = arg;
+                        vars.sta_vars[idx as usize] = arg;
                     } else {
                         return Err(Error::StackUnderflow);
                     }
                 } else if cur >= 'a' && cur <= 'z' {
                     if let Some(arg) = stack.pop() {
                         let idx = (cur as u8) - b'a';
-                        vars.dyn[idx as usize] = arg;
+                        vars.dyn_vars[idx as usize] = arg;
                     } else {
                         return Err(Error::StackUnderflow);
                     }
@@ -324,16 +327,16 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
             GetVar => {
                 if cur >= 'A' && cur <= 'Z' {
                     let idx = (cur as u8) - b'A';
-                    stack.push(vars.sta[idx as usize].clone());
+                    stack.push(vars.sta_vars[idx as usize].clone());
                 } else if cur >= 'a' && cur <= 'z' {
                     let idx = (cur as u8) - b'a';
-                    stack.push(vars.dyn[idx as usize].clone());
+                    stack.push(vars.dyn_vars[idx as usize].clone());
                 } else {
                     return Err(Error::InvalidVariableName(cur));
                 }
             }
             CharConstant => {
-                stack.push(Number(c as i32));
+                stack.push(Number(i32::from(c)));
                 state = CharClose;
             }
             CharClose => {
@@ -346,7 +349,8 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                     stack.push(Number(i));
                     state = Nothing;
                 } else if let Some(digit) = cur.to_digit(10) {
-                    match i.checked_mul(10)
+                    match i
+                        .checked_mul(10)
                         .and_then(|i_ten| i_ten.checked_add(digit as i32))
                     {
                         Some(i) => {
@@ -384,11 +388,11 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                     (FormatState::Flags, ' ') => {
                         flags.space = true;
                     }
-                    (FormatState::Flags, '0'...'9') => {
+                    (FormatState::Flags, '0'..='9') => {
                         flags.width = cur as usize - '0' as usize;
                         *fstate = FormatState::Width;
                     }
-                    (FormatState::Width, '0'...'9') => {
+                    (FormatState::Width, '0'..='9') => {
                         flags.width = match flags
                             .width
                             .checked_mul(10)
@@ -401,7 +405,7 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                     (FormatState::Width, '.') | (FormatState::Flags, '.') => {
                         *fstate = FormatState::Precision;
                     }
-                    (FormatState::Precision, '0'...'9') => {
+                    (FormatState::Precision, '0'..='9') => {
                         flags.precision = match flags
                             .precision
                             .checked_mul(10)
@@ -535,7 +539,8 @@ fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8>, Error> {
                     }
                 }
                 String => return Err(Error::TypeMismatch),
-            }.into_bytes()
+            }
+            .into_bytes()
         }
         Words(s) => match op {
             String => {
@@ -564,8 +569,8 @@ fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8>, Error> {
 
 #[cfg(test)]
 mod test {
-    use super::{expand, Variables};
     use super::Param::{self, Number, Words};
+    use super::{expand, Variables};
     use std::result::Result::Ok;
 
     #[test]
