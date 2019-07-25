@@ -65,8 +65,8 @@
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
 
-extern crate byteorder;
-extern crate dirs;
+
+
 
 use std::io::prelude::*;
 
@@ -254,7 +254,7 @@ impl std::cmp::PartialEq for Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use std::error::Error;
         if let crate::Error::Io(ref e) = *self {
             write!(f, "{}", e)

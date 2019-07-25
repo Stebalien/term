@@ -1,4 +1,4 @@
-extern crate term;
+
 
 use term::terminfo::TermInfo;
 use term::terminfo::TerminfoTerminal;
