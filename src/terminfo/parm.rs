@@ -113,9 +113,9 @@ impl ::std::error::Error for Error {
 #[derive(Default)]
 pub struct Variables {
     /// Static variables A-Z
-    sta: [Param; 26],
+    sta_vars: [Param; 26],
     /// Dynamic variables a-z
-    r#dyn: [Param; 26],
+    dyn_vars: [Param; 26],
 }
 
 impl Variables {
@@ -309,14 +309,14 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
                 if cur >= 'A' && cur <= 'Z' {
                     if let Some(arg) = stack.pop() {
                         let idx = (cur as u8) - b'A';
-                        vars.sta[idx as usize] = arg;
+                        vars.sta_vars[idx as usize] = arg;
                     } else {
                         return Err(Error::StackUnderflow);
                     }
                 } else if cur >= 'a' && cur <= 'z' {
                     if let Some(arg) = stack.pop() {
                         let idx = (cur as u8) - b'a';
-                        vars.r#dyn[idx as usize] = arg;
+                        vars.dyn_vars[idx as usize] = arg;
                     } else {
                         return Err(Error::StackUnderflow);
                     }
@@ -327,10 +327,10 @@ pub fn expand(cap: &[u8], params: &[Param], vars: &mut Variables) -> Result<Vec<
             GetVar => {
                 if cur >= 'A' && cur <= 'Z' {
                     let idx = (cur as u8) - b'A';
-                    stack.push(vars.sta[idx as usize].clone());
+                    stack.push(vars.sta_vars[idx as usize].clone());
                 } else if cur >= 'a' && cur <= 'z' {
                     let idx = (cur as u8) - b'a';
-                    stack.push(vars.r#dyn[idx as usize].clone());
+                    stack.push(vars.dyn_vars[idx as usize].clone());
                 } else {
                     return Err(Error::InvalidVariableName(cur));
                 }

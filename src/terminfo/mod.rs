@@ -113,8 +113,8 @@ impl TermInfo {
             Ok(TermInfo {
                 names: vec![name.to_owned()],
                 bools: HashMap::new(),
-                numbers,
-                strings,
+                numbers: numbers,
+                strings: strings,
             })
         } else {
             Err(crate::Error::TerminfoEntryNotFound)
@@ -374,7 +374,7 @@ impl<T: Write> TerminfoTerminal<T> {
         };
 
         TerminfoTerminal {
-            out,
+            out: out,
             ti: terminfo,
             num_colors: nc as u32,
         }
