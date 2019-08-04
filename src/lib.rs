@@ -64,6 +64,7 @@
 )]
 #![deny(missing_docs)]
 #![cfg_attr(test, deny(warnings))]
+#![allow(clippy::redundant_field_names)]
 
 use std::io::prelude::*;
 
