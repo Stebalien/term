@@ -14,8 +14,6 @@ use std::collections::HashMap;
 use std::io;
 use std::io::prelude::*;
 
-use byteorder::{LittleEndian, ReadBytesExt};
-
 use crate::terminfo::Error::*;
 use crate::terminfo::TermInfo;
 use crate::Result;
@@ -26,11 +24,14 @@ pub use crate::terminfo::parser::names::*;
 // sure if portable.
 
 fn read_le_u16(r: &mut dyn io::Read) -> io::Result<u32> {
-    r.read_u16::<LittleEndian>().map(u32::from)
+    let mut buf = [0; 2];
+    r.read_exact(&mut buf)
+        .map(|()| u32::from(u16::from_le_bytes(buf)))
 }
 
 fn read_le_u32(r: &mut dyn io::Read) -> io::Result<u32> {
-    r.read_u32::<LittleEndian>()
+    let mut buf = [0; 4];
+    r.read_exact(&mut buf).map(|()| u32::from_le_bytes(buf))
 }
 
 fn read_byte(r: &mut dyn io::Read) -> io::Result<u8> {
@@ -50,7 +51,9 @@ pub fn parse(file: &mut dyn io::Read, longnames: bool) -> Result<TermInfo> {
     };
 
     // Check magic number
-    let magic = file.read_u16::<LittleEndian>()?;
+    let mut buf = [0; 2];
+    file.read_exact(&mut buf)?;
+    let magic = u16::from_le_bytes(buf);
 
     let read_number = match magic {
         0x011A => read_le_u16,
@@ -131,7 +134,10 @@ pub fn parse(file: &mut dyn io::Read, longnames: bool) -> Result<TermInfo> {
 
     let string_map: HashMap<&str, Vec<u8>> = if string_offsets_count > 0 {
         let string_offsets = (0..string_offsets_count)
-            .map(|_| file.read_u16::<LittleEndian>())
+            .map(|_| {
+                let mut buf = [0; 2];
+                file.read_exact(&mut buf).map(|()| u16::from_le_bytes(buf))
+            })
             .collect::<io::Result<Vec<_>>>()?;
 
         let mut string_table = Vec::new();
