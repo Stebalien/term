@@ -161,6 +161,15 @@ fn test_conout() {
     assert!(conout().is_ok())
 }
 
+#[rustversion::before(1.36)]
+unsafe fn uninitialized<T>() -> T {
+    ::std::mem::uninitialized()
+}
+#[rustversion::since(1.36)]
+unsafe fn uninitialized<T>() -> T {
+    ::std::mem::MaybeUninit::uninit().assume_init()
+}
+
 impl WinConsoleInfo {
     /// Returns `Err` whenever console info cannot be retrieved for some
     /// reason.
@@ -169,7 +178,7 @@ impl WinConsoleInfo {
         let bg;
         let handle = conout()?;
         unsafe {
-            let mut buffer_info = ::std::mem::uninitialized();
+            let mut buffer_info = uninitialized();
             if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) != 0 {
                 fg = bits_to_color(buffer_info.wAttributes);
                 bg = bits_to_color(buffer_info.wAttributes >> 4);
@@ -326,7 +335,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         let _unused = self.buf.flush();
         let handle = conout()?;
         unsafe {
-            let mut buffer_info = ::std::mem::uninitialized();
+            let mut buffer_info = uninitialized();
             if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) != 0 {
                 let (x, y) = (
                     buffer_info.dwCursorPosition.X,
@@ -356,7 +365,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         let _unused = self.buf.flush();
         let handle = conout()?;
         unsafe {
-            let mut buffer_info = ::std::mem::uninitialized();
+            let mut buffer_info = uninitialized();
             if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) == 0 {
                 return Err(io::Error::last_os_error().into());
             }
@@ -382,7 +391,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         let _unused = self.buf.flush();
         let handle = conout()?;
         unsafe {
-            let mut buffer_info = ::std::mem::uninitialized();
+            let mut buffer_info = uninitialized();
             if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) != 0 {
                 let COORD { X: x, Y: y } = buffer_info.dwCursorPosition;
                 if x == 0 {
