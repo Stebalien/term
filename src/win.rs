@@ -174,11 +174,11 @@ unsafe fn get_console_screen_buffer_info(handle: HANDLE) -> io::Result<CONSOLE_S
 }
 #[rustversion::since(1.36)]
 unsafe fn get_console_screen_buffer_info(handle: HANDLE) -> io::Result<CONSOLE_SCREEN_BUFFER_INFO> {
-    let mut buffer_info = ::std::mem::MaybeUninit::uninit().assume_init();
-    if GetConsoleScreenBufferInfo(handle, &mut buffer_info) == 0 {
+    let mut buffer_info = ::std::mem::MaybeUninit::uninit();
+    if GetConsoleScreenBufferInfo(handle, buffer_info.as_mut_ptr()) == 0 {
         Err(io::Error::last_os_error())
     } else {
-        Ok(buffer_info)
+        Ok(buffer_info.assume_init())
     }
 }
 
