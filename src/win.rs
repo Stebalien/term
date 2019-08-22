@@ -27,7 +27,9 @@ use winapi::um::consoleapi::{GetConsoleMode, SetConsoleMode};
 use winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
 use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
 use winapi::um::wincon::FillConsoleOutputAttribute;
-use winapi::um::wincon::{FillConsoleOutputCharacterW, GetConsoleScreenBufferInfo, COORD};
+use winapi::um::wincon::{
+    FillConsoleOutputCharacterW, GetConsoleScreenBufferInfo, CONSOLE_SCREEN_BUFFER_INFO, COORD,
+};
 use winapi::um::wincon::{SetConsoleCursorPosition, SetConsoleTextAttribute};
 use winapi::um::wincon::{BACKGROUND_INTENSITY, ENABLE_VIRTUAL_TERMINAL_PROCESSING};
 use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE, HANDLE};
@@ -161,6 +163,35 @@ fn test_conout() {
     assert!(conout().is_ok())
 }
 
+#[rustversion::before(1.36)]
+unsafe fn get_console_screen_buffer_info(handle: HANDLE) -> io::Result<CONSOLE_SCREEN_BUFFER_INFO> {
+    let mut buffer_info = ::std::mem::uninitialized();
+    if GetConsoleScreenBufferInfo(handle, &mut buffer_info) == 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(buffer_info)
+    }
+}
+#[rustversion::since(1.36)]
+unsafe fn get_console_screen_buffer_info(handle: HANDLE) -> io::Result<CONSOLE_SCREEN_BUFFER_INFO> {
+    let mut buffer_info = ::std::mem::MaybeUninit::uninit();
+    if GetConsoleScreenBufferInfo(handle, buffer_info.as_mut_ptr()) == 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(buffer_info.assume_init())
+    }
+}
+
+// This test will only pass if it is running in an actual console, probably
+#[test]
+fn test_get_console_screen_buffer_info() {
+    let handle = conout().unwrap();
+    unsafe {
+        let buffer_info = get_console_screen_buffer_info(*handle);
+        assert!(buffer_info.is_ok());
+    }
+}
+
 impl WinConsoleInfo {
     /// Returns `Err` whenever console info cannot be retrieved for some
     /// reason.
@@ -169,13 +200,9 @@ impl WinConsoleInfo {
         let bg;
         let handle = conout()?;
         unsafe {
-            let mut buffer_info = ::std::mem::uninitialized();
-            if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) != 0 {
-                fg = bits_to_color(buffer_info.wAttributes);
-                bg = bits_to_color(buffer_info.wAttributes >> 4);
-            } else {
-                return Err(io::Error::last_os_error());
-            }
+            let buffer_info = get_console_screen_buffer_info(*handle)?;
+            fg = bits_to_color(buffer_info.wAttributes);
+            bg = bits_to_color(buffer_info.wAttributes >> 4);
         }
         Ok(WinConsoleInfo {
             def_foreground: fg,
@@ -326,28 +353,24 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         let _unused = self.buf.flush();
         let handle = conout()?;
         unsafe {
-            let mut buffer_info = ::std::mem::uninitialized();
-            if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) != 0 {
-                let (x, y) = (
-                    buffer_info.dwCursorPosition.X,
-                    buffer_info.dwCursorPosition.Y,
-                );
-                if y == 0 {
-                    // Even though this might want to be a CursorPositionInvalid, on Unix there
-                    // is no checking to see if the cursor is already on the first line.
-                    // I'm not sure what the ideal behavior is, but I think it'd be silly to have
-                    // cursor_up fail in this case.
+            let buffer_info = get_console_screen_buffer_info(*handle)?;
+            let (x, y) = (
+                buffer_info.dwCursorPosition.X,
+                buffer_info.dwCursorPosition.Y,
+            );
+            if y == 0 {
+                // Even though this might want to be a CursorPositionInvalid, on Unix there
+                // is no checking to see if the cursor is already on the first line.
+                // I'm not sure what the ideal behavior is, but I think it'd be silly to have
+                // cursor_up fail in this case.
+                Ok(())
+            } else {
+                let pos = COORD { X: x, Y: y - 1 };
+                if SetConsoleCursorPosition(*handle, pos) != 0 {
                     Ok(())
                 } else {
-                    let pos = COORD { X: x, Y: y - 1 };
-                    if SetConsoleCursorPosition(*handle, pos) != 0 {
-                        Ok(())
-                    } else {
-                        Err(io::Error::last_os_error().into())
-                    }
+                    Err(io::Error::last_os_error().into())
                 }
-            } else {
-                Err(io::Error::last_os_error().into())
             }
         }
     }
@@ -356,10 +379,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         let _unused = self.buf.flush();
         let handle = conout()?;
         unsafe {
-            let mut buffer_info = ::std::mem::uninitialized();
-            if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) == 0 {
-                return Err(io::Error::last_os_error().into());
-            }
+            let buffer_info = get_console_screen_buffer_info(*handle)?;
             let pos = buffer_info.dwCursorPosition;
             let size = buffer_info.dwSize;
             let num = (size.X - pos.X) as DWORD;
@@ -382,21 +402,17 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         let _unused = self.buf.flush();
         let handle = conout()?;
         unsafe {
-            let mut buffer_info = ::std::mem::uninitialized();
-            if GetConsoleScreenBufferInfo(*handle, &mut buffer_info) != 0 {
-                let COORD { X: x, Y: y } = buffer_info.dwCursorPosition;
-                if x == 0 {
-                    Err(Error::CursorDestinationInvalid)
-                } else {
-                    let pos = COORD { X: 0, Y: y };
-                    if SetConsoleCursorPosition(*handle, pos) != 0 {
-                        Ok(())
-                    } else {
-                        Err(io::Error::last_os_error().into())
-                    }
-                }
+            let buffer_info = get_console_screen_buffer_info(*handle)?;
+            let COORD { X: x, Y: y } = buffer_info.dwCursorPosition;
+            if x == 0 {
+                Err(Error::CursorDestinationInvalid)
             } else {
-                Err(io::Error::last_os_error().into())
+                let pos = COORD { X: 0, Y: y };
+                if SetConsoleCursorPosition(*handle, pos) != 0 {
+                    Ok(())
+                } else {
+                    Err(io::Error::last_os_error().into())
+                }
             }
         }
     }
