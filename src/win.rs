@@ -182,6 +182,16 @@ unsafe fn get_console_screen_buffer_info(handle: HANDLE) -> io::Result<CONSOLE_S
     }
 }
 
+// This test will only pass if it is running in an actual console, probably
+#[test]
+fn test_get_console_screen_buffer_info() {
+    let handle = conout().unwrap();
+    unsafe {
+        let buffer_info = get_console_screen_buffer_info(*handle);
+        assert!(buffer_info.is_ok());
+    }
+}
+
 impl WinConsoleInfo {
     /// Returns `Err` whenever console info cannot be retrieved for some
     /// reason.
