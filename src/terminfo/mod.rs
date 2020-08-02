@@ -206,11 +206,16 @@ pub enum Error {
 
 impl ::std::fmt::Display for Error {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        use std::error::Error;
         match *self {
-            NotUtf8(e) => write!(f, "{}", e),
             BadMagic(v) => write!(f, "bad magic number {:x} in terminfo header", v),
-            _ => f.write_str(self.description()),
+            ShortNames => f.write_str("no names exposed, need at least one"),
+            TooManyBools => f.write_str("more boolean properties than libterm knows about"),
+            TooManyNumbers => f.write_str("more number properties than libterm knows about"),
+            TooManyStrings => f.write_str("more string properties than libterm knows about"),
+            InvalidLength => f.write_str("invalid length field value, must be >= -1"),
+            NotUtf8(ref e) => e.fmt(f),
+            NamesMissingNull => f.write_str("names table missing NUL terminator"),
+            StringsMissingNull => f.write_str("string table missing NUL terminator"),
         }
     }
 }
@@ -222,21 +227,7 @@ impl ::std::convert::From<::std::string::FromUtf8Error> for Error {
 }
 
 impl ::std::error::Error for Error {
-    fn description(&self) -> &str {
-        match *self {
-            BadMagic(..) => "incorrect magic number at start of file",
-            ShortNames => "no names exposed, need at least one",
-            TooManyBools => "more boolean properties than libterm knows about",
-            TooManyNumbers => "more number properties than libterm knows about",
-            TooManyStrings => "more string properties than libterm knows about",
-            InvalidLength => "invalid length field value, must be >= -1",
-            NotUtf8(ref e) => e.description(),
-            NamesMissingNull => "names table missing NUL terminator",
-            StringsMissingNull => "string table missing NUL terminator",
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn (::std::error::Error)> {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
             NotUtf8(ref e) => Some(e),
             _ => None,
