@@ -20,7 +20,7 @@ travis-ci = { repository = "Stebalien/term" }
 appveyor = { repository = "Stebalien/term" }
 
 [dependencies]
-dirs = "2.0.1"
+dirs = "3.0.1"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["consoleapi", "wincon", "handleapi", "fileapi"] }

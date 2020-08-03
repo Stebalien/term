@@ -82,32 +82,25 @@ pub enum Error {
 
 impl ::std::fmt::Display for Error {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        use std::error::Error;
-        f.write_str(self.description())
-    }
-}
-
-impl ::std::error::Error for Error {
-    fn description(&self) -> &str {
         use self::Error::*;
         match *self {
-            StackUnderflow => "not enough elements on the stack",
-            TypeMismatch => "type mismatch",
-            UnrecognizedFormatOption(_) => "unrecognized format option",
-            InvalidVariableName(_) => "invalid variable name",
-            InvalidParameterIndex(_) => "invalid parameter index",
-            MalformedCharacterConstant => "malformed character constant",
-            IntegerConstantOverflow => "integer constant computation overflowed",
-            MalformedIntegerConstant => "malformed integer constant",
-            FormatWidthOverflow => "format width constant computation overflowed",
-            FormatPrecisionOverflow => "format precision constant computation overflowed",
+            StackUnderflow => f.write_str("not enough elements on the stack"),
+            TypeMismatch => f.write_str("type mismatch"),
+            UnrecognizedFormatOption(_) => f.write_str("unrecognized format option"),
+            InvalidVariableName(_) => f.write_str("invalid variable name"),
+            InvalidParameterIndex(_) => f.write_str("invalid parameter index"),
+            MalformedCharacterConstant => f.write_str("malformed character constant"),
+            IntegerConstantOverflow => f.write_str("integer constant computation overflowed"),
+            MalformedIntegerConstant => f.write_str("malformed integer constant"),
+            FormatWidthOverflow => f.write_str("format width constant computation overflowed"),
+            FormatPrecisionOverflow => {
+                f.write_str("format precision constant computation overflowed")
+            }
         }
     }
-
-    fn cause(&self) -> Option<&dyn (::std::error::Error)> {
-        None
-    }
 }
+
+impl ::std::error::Error for Error {}
 
 /// Container for static and dynamic variable arrays
 #[derive(Default)]

@@ -253,32 +253,27 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use std::error::Error;
-        if let crate::Error::Io(ref e) = *self {
-            write!(f, "{}", e)
-        } else {
-            f.write_str(self.description())
+        use crate::Error::*;
+        match *self {
+            Io(ref io) => io.fmt(f),
+            TerminfoParsing(ref e) => e.fmt(f),
+            ParameterizedExpansion(ref e) => e.fmt(f),
+            NotSupported => f.write_str("operation not supported by the terminal"),
+            TermUnset => {
+                f.write_str("TERM environment variable unset, unable to detect a terminal")
+            }
+            TerminfoEntryNotFound => {
+                f.write_str("could not find a terminfo entry for this terminal")
+            }
+            CursorDestinationInvalid => f.write_str("could not move cursor to requested position"),
+            ColorOutOfRange => f.write_str("color not supported by the terminal"),
+            __Nonexhaustive => f.write_str("placeholder variant that shouldn't be used"),
         }
     }
 }
 
 impl std::error::Error for Error {
-    fn description(&self) -> &str {
-        use crate::Error::*;
-        match *self {
-            Io(ref io) => io.description(),
-            TerminfoParsing(ref e) => e.description(),
-            ParameterizedExpansion(ref e) => e.description(),
-            NotSupported => "operation not supported by the terminal",
-            TermUnset => "TERM environment variable unset, unable to detect a terminal",
-            TerminfoEntryNotFound => "could not find a terminfo entry for this terminal",
-            CursorDestinationInvalid => "could not move cursor to requested position",
-            ColorOutOfRange => "color not supported by the terminal",
-            __Nonexhaustive => "placeholder variant that shouldn't be used",
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn std::error::Error> {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match *self {
             Error::Io(ref io) => Some(io),
             Error::TerminfoParsing(ref e) => Some(e),
