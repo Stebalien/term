@@ -18,12 +18,6 @@ Add this to your `Cargo.toml`:
 term = "*"
 ```
 
-and this to your crate root:
-
-```rust
-extern crate term;
-```
-
 ## Packaging and Distributing
 
 For all terminals but windows consoles, this library depends on a non-hashed
