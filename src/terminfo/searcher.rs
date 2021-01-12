@@ -16,7 +16,7 @@ use std::env;
 use std::fs;
 use std::path::PathBuf;
 
-use dirs;
+use dirs_next as dirs;
 
 /// Return path to database entry for `term`
 pub fn get_dbpath_for_term(term: &str) -> Option<PathBuf> {
