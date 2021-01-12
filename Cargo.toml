@@ -7,7 +7,7 @@ license = "MIT/Apache-2.0"
 readme = "README.md"
 repository = "https://github.com/Stebalien/term"
 homepage = "https://github.com/Stebalien/term"
-documentation = "https://stebalien.github.io/doc/term/term/"
+documentation = "https://docs.rs/term/"
 description = """
 A terminal formatting library
 """
@@ -16,7 +16,7 @@ exclude = ["/scripts/*", "/.travis.yml", "/appveyor.yml"]
 edition = "2018"
 
 [badges]
-travis-ci = { repository = "Stebalien/term" }
+circle-ci = { repository = "Stebalien/term" }
 appveyor = { repository = "Stebalien/term" }
 
 [dependencies]
