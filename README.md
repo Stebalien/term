@@ -8,6 +8,10 @@ A Rust library for terminfo parsing and terminal colors.
 
 [Documentation](https://docs.rs/term/)
 
+## MSRV
+
+1.36 - the minimum version testable on circleci.
+
 ## Usage
 
 Add this to your `Cargo.toml`:
