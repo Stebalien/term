@@ -3,7 +3,7 @@ term
 
 A Rust library for terminfo parsing and terminal colors.
 
-[![CI](https://github.com/Stebalien/term-crate/actions/workflows/ci.yml/badge.svg)](https://github.com/Stebalien/term-crate/actions/workflows/ci.yml)
+[![CI](https://github.com/Stebalien/term/actions/workflows/ci.yml/badge.svg)](https://github.com/Stebalien/term/actions/workflows/ci.yml)
 
 [Documentation](https://docs.rs/term/)
 
