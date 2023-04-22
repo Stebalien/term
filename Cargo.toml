@@ -20,7 +20,7 @@ circle-ci = { repository = "Stebalien/term" }
 appveyor = { repository = "Stebalien/term" }
 
 [dependencies]
-dirs-next = "2"
+home = "0.5.4"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["consoleapi", "wincon", "handleapi", "fileapi"] }
