@@ -17,22 +17,23 @@ use crate::Attr;
 use crate::Error;
 use crate::Result;
 use crate::Terminal;
+
 use std::io;
 use std::io::prelude::*;
 use std::ops::Deref;
 use std::ptr;
 
-use winapi::shared::minwindef::{DWORD, WORD};
-use winapi::um::consoleapi::{GetConsoleMode, SetConsoleMode};
-use winapi::um::fileapi::{CreateFileA, OPEN_EXISTING};
-use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
-use winapi::um::wincon::FillConsoleOutputAttribute;
-use winapi::um::wincon::{
-    FillConsoleOutputCharacterW, GetConsoleScreenBufferInfo, CONSOLE_SCREEN_BUFFER_INFO, COORD,
+use windows_sys::core::PCSTR;
+use windows_sys::Win32::Foundation::{
+    CloseHandle, GENERIC_READ, GENERIC_WRITE, HANDLE, INVALID_HANDLE_VALUE,
 };
-use winapi::um::wincon::{SetConsoleCursorPosition, SetConsoleTextAttribute};
-use winapi::um::wincon::{BACKGROUND_INTENSITY, ENABLE_VIRTUAL_TERMINAL_PROCESSING};
-use winapi::um::winnt::{FILE_SHARE_WRITE, GENERIC_READ, GENERIC_WRITE, HANDLE};
+use windows_sys::Win32::Storage::FileSystem::{CreateFileA, FILE_SHARE_WRITE, OPEN_EXISTING};
+use windows_sys::Win32::System::Console::{
+    FillConsoleOutputAttribute, FillConsoleOutputCharacterW, GetConsoleMode,
+    GetConsoleScreenBufferInfo, SetConsoleCursorPosition, SetConsoleMode, SetConsoleTextAttribute,
+    BACKGROUND_INTENSITY, CONSOLE_CHARACTER_ATTRIBUTES, CONSOLE_MODE, CONSOLE_SCREEN_BUFFER_INFO,
+    COORD, ENABLE_VIRTUAL_TERMINAL_PROCESSING,
+};
 
 /// Console info which can be used by a Terminal implementation
 /// which uses the Win32 Console API.
@@ -122,13 +123,13 @@ fn conout() -> io::Result<HandleWrapper> {
     let name = b"CONOUT$\0";
     let handle = unsafe {
         CreateFileA(
-            name.as_ptr() as *const i8,
+            name.as_ptr() as PCSTR,
             GENERIC_READ | GENERIC_WRITE,
             FILE_SHARE_WRITE,
             ptr::null_mut(),
             OPEN_EXISTING,
             0,
-            ptr::null_mut(),
+            0,
         )
     };
     if handle == INVALID_HANDLE_VALUE {
@@ -138,8 +139,8 @@ fn conout() -> io::Result<HandleWrapper> {
     }
 }
 
-unsafe fn set_flag(handle: HANDLE, flag: DWORD) -> io::Result<()> {
-    let mut curr_mode: DWORD = 0;
+unsafe fn set_flag(handle: HANDLE, flag: CONSOLE_MODE) -> io::Result<()> {
+    let mut curr_mode: CONSOLE_MODE = 0;
     if GetConsoleMode(handle, &mut curr_mode) == 0 {
         return Err(io::Error::last_os_error());
     }
@@ -231,7 +232,7 @@ impl<T: Write + Send> WinConsole<T> {
             fg = bg;
         }
 
-        let mut accum: WORD = 0;
+        let mut accum: CONSOLE_CHARACTER_ATTRIBUTES = 0;
 
         accum |= color_to_bits(fg);
         accum |= color_to_bits(bg) << 4;
@@ -382,7 +383,7 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
             let buffer_info = get_console_screen_buffer_info(*handle)?;
             let pos = buffer_info.dwCursorPosition;
             let size = buffer_info.dwSize;
-            let num = (size.X - pos.X) as DWORD;
+            let num = (size.X - pos.X) as u32;
             let mut written = 0;
             // 0x0020u16 is ' ' (space) in UTF-16 (same as ascii)
             if FillConsoleOutputCharacterW(*handle, 0x0020, num, pos, &mut written) == 0 {
