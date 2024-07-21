@@ -23,8 +23,18 @@ appveyor = { repository = "Stebalien/term" }
 home = "0.5.5"
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3", features = ["consoleapi", "wincon", "handleapi", "fileapi"] }
 rustversion = "1"
+
+
+[target.'cfg(windows)'.dependencies.windows-sys]
+version = "0.52.0"
+features = [
+  "Win32_Storage",
+  "Win32_Foundation",
+  "Win32_System_Console",
+  "Win32_Storage_FileSystem",
+  "Win32_Security",
+]
 
 [features]
 default=[]
