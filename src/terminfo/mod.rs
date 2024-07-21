@@ -61,7 +61,7 @@ impl TermInfo {
     /// Create a `TermInfo` based on current environment.
     pub fn from_env() -> Result<TermInfo> {
         let term_var = env::var("TERM").ok();
-        let term_name = term_var.as_ref().map(|s| &**s).or_else(|| {
+        let term_name = term_var.as_deref().or_else(|| {
             env::var("MSYSCON").ok().and_then(|s| {
                 if s == "mintty.exe" {
                     Some("msyscon")
@@ -91,7 +91,7 @@ impl TermInfo {
     /// Create a `TermInfo` for the named terminal.
     pub fn from_name(name: &str) -> Result<TermInfo> {
         if let Some(path) = get_dbpath_for_term(name) {
-            match TermInfo::from_path(&path) {
+            match TermInfo::from_path(path) {
                 Ok(term) => return Ok(term),
                 // Skip IO Errors (e.g., permission denied).
                 Err(crate::Error::Io(_)) => {}
@@ -206,14 +206,14 @@ pub enum Error {
 
 impl ::std::fmt::Display for Error {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        match *self {
+        match self {
             BadMagic(v) => write!(f, "bad magic number {:x} in terminfo header", v),
             ShortNames => f.write_str("no names exposed, need at least one"),
             TooManyBools => f.write_str("more boolean properties than libterm knows about"),
             TooManyNumbers => f.write_str("more number properties than libterm knows about"),
             TooManyStrings => f.write_str("more string properties than libterm knows about"),
             InvalidLength => f.write_str("invalid length field value, must be >= -1"),
-            NotUtf8(ref e) => e.fmt(f),
+            NotUtf8(e) => e.fmt(f),
             NamesMissingNull => f.write_str("names table missing NUL terminator"),
             StringsMissingNull => f.write_str("string table missing NUL terminator"),
         }
@@ -228,8 +228,8 @@ impl ::std::convert::From<::std::string::FromUtf8Error> for Error {
 
 impl ::std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match *self {
-            NotUtf8(ref e) => Some(e),
+        match self {
+            NotUtf8(e) => Some(e),
             _ => None,
         }
     }
@@ -239,7 +239,7 @@ pub mod searcher;
 
 /// `TermInfo` format parsing.
 pub mod parser {
-    //! ncurses-compatible compiled terminfo format parsing (term(5))
+    /// ncurses-compatible compiled terminfo format parsing (term(5))
     pub mod compiled;
     mod names;
 }
@@ -307,7 +307,7 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
             Attr::ForegroundColor(_) | Attr::BackgroundColor(_) => self.num_colors > 0,
             _ => {
                 let cap = cap_for_attr(attr);
-                self.ti.strings.get(cap).is_some()
+                self.ti.strings.contains_key(cap)
             }
         }
     }
@@ -319,7 +319,7 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
     fn supports_reset(&self) -> bool {
         ["sgr0", "sgr", "op"]
             .iter()
-            .any(|&cap| self.ti.strings.get(cap).is_some())
+            .any(|&cap| self.ti.strings.contains_key(cap))
     }
 
     fn supports_color(&self) -> bool {
@@ -356,18 +356,17 @@ impl<T: Write> Terminal for TerminfoTerminal<T> {
 
 impl<T: Write> TerminfoTerminal<T> {
     /// Create a new TerminfoTerminal with the given TermInfo and Write.
-    pub fn new_with_terminfo(out: T, terminfo: TermInfo) -> TerminfoTerminal<T> {
-        let nc = if terminfo.strings.contains_key("setaf") && terminfo.strings.contains_key("setab")
-        {
-            terminfo.numbers.get("colors").map_or(0, |&n| n)
+    pub fn new_with_terminfo(out: T, ti: TermInfo) -> TerminfoTerminal<T> {
+        let num_colors = if ti.strings.contains_key("setaf") && ti.strings.contains_key("setab") {
+            ti.numbers.get("colors").map_or(0, |&n| n)
         } else {
             0
         };
 
         TerminfoTerminal {
-            out: out,
-            ti: terminfo,
-            num_colors: nc as u32,
+            out,
+            ti,
+            num_colors,
         }
     }
 
@@ -381,7 +380,7 @@ impl<T: Write> TerminfoTerminal<T> {
     }
 
     fn dim_if_necessary(&self, color: color::Color) -> color::Color {
-        if color >= self.num_colors && color >= 8 && color < 16 {
+        if color >= self.num_colors && (8..16).contains(&color) {
             color - 8
         } else {
             color

@@ -27,16 +27,9 @@
 //! term = "*"
 //! ```
 //!
-//! and this to your crate root:
-//!
-//! ```rust
-//! extern crate term;
-//! ```
-//!
 //! # Examples
 //!
 //! ```no_run
-//! extern crate term;
 //! use std::io::prelude::*;
 //!
 //! fn main() {
@@ -59,12 +52,12 @@
 #![doc(
     html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk-v2.png",
     html_favicon_url = "https://doc.rust-lang.org/favicon.ico",
-    html_root_url = "https://stebalien.github.io/doc/term/term/",
+    html_root_url = "https://docs.rs/term/latest",
     test(attr(deny(warnings)))
 )]
 #![deny(missing_docs)]
+#![deny(rust_2018_idioms)]
 #![cfg_attr(test, deny(warnings))]
-#![allow(clippy::redundant_field_names)]
 
 use std::io::prelude::*;
 
@@ -180,6 +173,7 @@ pub enum Attr {
 
 /// An error arising from interacting with the terminal.
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum Error {
     /// Indicates an error from any underlying IO
     Io(io::Error),
@@ -200,50 +194,21 @@ pub enum Error {
     ///
     /// This is like `NotSupported`, but more specific.
     ColorOutOfRange,
-    #[doc(hidden)]
-    /// Please don't match against this - if you do, we can't promise we won't break your crate
-    /// with a semver-compliant version bump.
-    __Nonexhaustive,
 }
 
 // manually implemented because std::io::Error does not implement Eq/PartialEq
 impl std::cmp::PartialEq for Error {
     fn eq(&self, other: &Error) -> bool {
         use crate::Error::*;
-        match *self {
+        match self {
             Io(_) => false,
-            TerminfoParsing(ref inner1) => match *other {
-                TerminfoParsing(ref inner2) => inner1 == inner2,
-                _ => false,
-            },
-            ParameterizedExpansion(ref inner1) => match *other {
-                ParameterizedExpansion(ref inner2) => inner1 == inner2,
-                _ => false,
-            },
-            NotSupported => match *other {
-                NotSupported => true,
-                _ => false,
-            },
-            TermUnset => match *other {
-                TermUnset => true,
-                _ => false,
-            },
-            TerminfoEntryNotFound => match *other {
-                TerminfoEntryNotFound => true,
-                _ => false,
-            },
-            CursorDestinationInvalid => match *other {
-                CursorDestinationInvalid => true,
-                _ => false,
-            },
-            ColorOutOfRange => match *other {
-                ColorOutOfRange => true,
-                _ => false,
-            },
-            __Nonexhaustive => match *other {
-                __Nonexhaustive => true,
-                _ => false,
-            },
+            TerminfoParsing(a) => matches!(other, TerminfoParsing(b) if a == b),
+            ParameterizedExpansion(a) => matches!(other, ParameterizedExpansion(b) if a == b),
+            NotSupported => matches!(other, NotSupported),
+            TermUnset => matches!(other, TermUnset),
+            TerminfoEntryNotFound => matches!(other, TerminfoEntryNotFound),
+            CursorDestinationInvalid => matches!(other, CursorDestinationInvalid),
+            ColorOutOfRange => matches!(other, ColorOutOfRange),
         }
     }
 }
@@ -254,10 +219,10 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use crate::Error::*;
-        match *self {
-            Io(ref io) => io.fmt(f),
-            TerminfoParsing(ref e) => e.fmt(f),
-            ParameterizedExpansion(ref e) => e.fmt(f),
+        match self {
+            Io(io) => io.fmt(f),
+            TerminfoParsing(e) => e.fmt(f),
+            ParameterizedExpansion(e) => e.fmt(f),
             NotSupported => f.write_str("operation not supported by the terminal"),
             TermUnset => {
                 f.write_str("TERM environment variable unset, unable to detect a terminal")
@@ -267,17 +232,16 @@ impl std::fmt::Display for Error {
             }
             CursorDestinationInvalid => f.write_str("could not move cursor to requested position"),
             ColorOutOfRange => f.write_str("color not supported by the terminal"),
-            __Nonexhaustive => f.write_str("placeholder variant that shouldn't be used"),
         }
     }
 }
 
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match *self {
-            Error::Io(ref io) => Some(io),
-            Error::TerminfoParsing(ref e) => Some(e),
-            Error::ParameterizedExpansion(ref e) => Some(e),
+        match self {
+            Error::Io(io) => Some(io),
+            Error::TerminfoParsing(e) => Some(e),
+            Error::ParameterizedExpansion(e) => Some(e),
             _ => None,
         }
     }
@@ -285,8 +249,8 @@ impl std::error::Error for Error {
 
 impl From<Error> for io::Error {
     fn from(err: Error) -> io::Error {
-        let kind = match err {
-            Error::Io(ref e) => e.kind(),
+        let kind = match &err {
+            Error::Io(e) => e.kind(),
             _ => io::ErrorKind::Other,
         };
         io::Error::new(kind, err)
