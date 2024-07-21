@@ -164,16 +164,6 @@ fn test_conout() {
     assert!(conout().is_ok())
 }
 
-#[rustversion::before(1.36)]
-unsafe fn get_console_screen_buffer_info(handle: HANDLE) -> io::Result<CONSOLE_SCREEN_BUFFER_INFO> {
-    let mut buffer_info = ::std::mem::uninitialized();
-    if GetConsoleScreenBufferInfo(handle, &mut buffer_info) == 0 {
-        Err(io::Error::last_os_error())
-    } else {
-        Ok(buffer_info)
-    }
-}
-#[rustversion::since(1.36)]
 unsafe fn get_console_screen_buffer_info(handle: HANDLE) -> io::Result<CONSOLE_SCREEN_BUFFER_INFO> {
     let mut buffer_info = ::std::mem::MaybeUninit::uninit();
     if GetConsoleScreenBufferInfo(handle, buffer_info.as_mut_ptr()) == 0 {

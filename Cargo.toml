@@ -15,16 +15,8 @@ categories = ["command-line-interface"]
 edition = "2021"
 rust-version = "1.63"
 
-[badges]
-circle-ci = { repository = "Stebalien/term" }
-appveyor = { repository = "Stebalien/term" }
-
 [dependencies]
 home = "0.5.5"
-
-[target.'cfg(windows)'.dependencies]
-rustversion = "1"
-
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 version = "0.52.0"
