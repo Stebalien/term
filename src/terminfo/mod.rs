@@ -113,8 +113,8 @@ impl TermInfo {
             Ok(TermInfo {
                 names: vec![name.to_owned()],
                 bools: HashMap::new(),
-                numbers: numbers,
-                strings: strings,
+                numbers,
+                strings,
             })
         } else {
             Err(crate::Error::TerminfoEntryNotFound)

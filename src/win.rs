@@ -148,7 +148,8 @@ unsafe fn set_flag(handle: HANDLE, flag: CONSOLE_MODE) -> io::Result<()> {
     if SetConsoleMode(handle, curr_mode | flag) == 0 {
         return Err(io::Error::last_os_error());
     }
-    return Ok(());
+
+    Ok(())
 }
 
 /// Check if console supports ansi codes (should succeed on Windows 10)
@@ -311,14 +312,14 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
     }
 
     fn supports_attr(&self, attr: Attr) -> bool {
-        match attr {
+        matches!(
+            attr,
             Attr::ForegroundColor(_)
-            | Attr::BackgroundColor(_)
-            | Attr::Standout(_)
-            | Attr::Reverse
-            | Attr::Secure => true,
-            _ => false,
-        }
+                | Attr::BackgroundColor(_)
+                | Attr::Standout(_)
+                | Attr::Reverse
+                | Attr::Secure
+        )
     }
 
     fn reset(&mut self) -> Result<()> {
@@ -408,11 +409,11 @@ impl<T: Write + Send> Terminal for WinConsole<T> {
         }
     }
 
-    fn get_ref<'a>(&'a self) -> &'a T {
+    fn get_ref(&self) -> &T {
         &self.buf
     }
 
-    fn get_mut<'a>(&'a mut self) -> &'a mut T {
+    fn get_mut(&mut self) -> &mut T {
         &mut self.buf
     }
 
