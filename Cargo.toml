@@ -13,6 +13,7 @@ A terminal formatting library
 """
 categories = ["command-line-interface"]
 edition = "2018"
+rust-version = "1.63"
 
 [badges]
 circle-ci = { repository = "Stebalien/term" }

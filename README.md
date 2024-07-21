@@ -9,7 +9,7 @@ A Rust library for terminfo parsing and terminal colors.
 
 ## MSRV
 
-1.36 - the minimum version testable on circleci.
+1.63
 
 ## Usage
 
