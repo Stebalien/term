@@ -12,7 +12,6 @@ description = """
 A terminal formatting library
 """
 categories = ["command-line-interface"]
-exclude = ["/scripts/*", "/.travis.yml", "/appveyor.yml"]
 edition = "2018"
 
 [badges]
