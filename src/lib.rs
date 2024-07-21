@@ -32,17 +32,15 @@
 //! ```no_run
 //! use std::io::prelude::*;
 //!
-//! fn main() {
-//!     let mut t = term::stdout().unwrap();
+//! let mut t = term::stdout().unwrap();
 //!
-//!     t.fg(term::color::GREEN).unwrap();
-//!     write!(t, "hello, ").unwrap();
+//! t.fg(term::color::GREEN).unwrap();
+//! write!(t, "hello, ").unwrap();
 //!
-//!     t.fg(term::color::RED).unwrap();
-//!     writeln!(t, "world!").unwrap();
+//! t.fg(term::color::RED).unwrap();
+//! writeln!(t, "world!").unwrap();
 //!
-//!     t.reset().unwrap();
-//! }
+//! t.reset().unwrap();
 //! ```
 //!
 //! [ansi]: https://en.wikipedia.org/wiki/ANSI_escape_code
