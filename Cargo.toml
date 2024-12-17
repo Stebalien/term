@@ -16,7 +16,7 @@ edition = "2021"
 rust-version = "1.63"
 
 [dependencies]
-home = "0.5.5"
+home = ">0.5.5, <0.5.11"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 version = "0.52.0"
