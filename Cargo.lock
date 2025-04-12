@@ -13,7 +13,7 @@ dependencies = [
 
 [[package]]
 name = "term"
-version = "1.0.1"
+version = "1.0.2"
 dependencies = [
  "home",
  "windows-sys 0.59.0",
