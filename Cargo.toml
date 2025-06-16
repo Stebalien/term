@@ -19,7 +19,7 @@ rust-version = "1.63"
 home = "0.5.5"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
-version = "0.59.0"
+version = "0.60.2"
 features = [
 	"Win32_Storage",
 	"Win32_Foundation",
