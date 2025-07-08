@@ -42,7 +42,7 @@ pub fn get_dbpath_for_term(term: &str) -> Option<PathBuf> {
     }
 
     // > Next, ncurses looks in $HOME/.terminfo for a compiled description.
-    if let Some(mut homedir) = home::home_dir() {
+    if let Some(mut homedir) = env::home_dir() {
         homedir.push(".terminfo");
         dirs_to_search.push(homedir)
     }
