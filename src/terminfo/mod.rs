@@ -207,7 +207,7 @@ pub enum Error {
 impl ::std::fmt::Display for Error {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         match self {
-            BadMagic(v) => write!(f, "bad magic number {:x} in terminfo header", v),
+            BadMagic(v) => write!(f, "bad magic number {v:x} in terminfo header"),
             ShortNames => f.write_str("no names exposed, need at least one"),
             TooManyBools => f.write_str("more boolean properties than libterm knows about"),
             TooManyNumbers => f.write_str("more number properties than libterm knows about"),
