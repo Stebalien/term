@@ -35,6 +35,9 @@ fn read_le_u32(r: &mut dyn io::Read) -> io::Result<u32> {
 }
 
 fn read_byte(r: &mut dyn io::Read) -> io::Result<u8> {
+    // We allow this because it's up to the caller to pass us a buffered reader when necessary
+    // (which is exactly what we do in this library).
+    #[allow(clippy::unbuffered_bytes)]
     match r.bytes().next() {
         Some(s) => s,
         None => Err(io::Error::new(io::ErrorKind::Other, "end of file")),
