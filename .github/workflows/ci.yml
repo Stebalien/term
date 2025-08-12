@@ -12,7 +12,7 @@ jobs:
       RUSTFLAGS: -D warnings
       RUST_BACKTRACE: 1
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - name: Run tests
         run: cargo test -- --color always
