@@ -503,10 +503,10 @@ fn format(val: Param, op: FormatOp, flags: Flags) -> Result<Vec<u8>, Error> {
         Number(d) => {
             match op {
                 Digit => {
+                    // C doesn't take sign into account in precision calculation.
                     if flags.sign {
-                        format!("{:+01$}", d, flags.precision)
+                        format!("{:+01$}", d, flags.precision + 1)
                     } else if d < 0 {
-                        // C doesn't take sign into account in precision calculation.
                         format!("{:01$}", d, flags.precision + 1)
                     } else if flags.space {
                         format!(" {:01$}", d, flags.precision)
@@ -741,6 +741,16 @@ mod test {
                 vars
             ),
             Ok("17017  001b0X001B".bytes().collect::<Vec<_>>())
+        );
+        assert_eq!(
+            expand(
+                b"%p1%.5d%p1% .5d%p1%:+.5d%p2%.5d%p2% .5d%p2%:+.5d",
+                &[Number(15), Number(-15)],
+                vars
+            ),
+            Ok("00015 00015+00015-00015-00015-00015"
+                .bytes()
+                .collect::<Vec<_>>())
         );
     }
 }
